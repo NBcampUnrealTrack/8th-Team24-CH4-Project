@@ -7,6 +7,7 @@
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
 #include "CrazyRoo.h"
+#include "CrazyRooGameMode.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
 void ACrazyRooPlayerController::BeginPlay()
@@ -38,6 +39,20 @@ void ACrazyRooPlayerController::BeginPlay()
 		}
 
 	}
+
+	// 역할 선택 위젯: 로컬 클라에서만 띄움 (데디 서버는 화면 없으니 자동 제외)
+	if (IsLocalController() && RoleSelectWidgetClass)
+	{
+		RoleSelectWidget = CreateWidget<UUserWidget>(this, RoleSelectWidgetClass);
+		if (RoleSelectWidget)
+		{
+			RoleSelectWidget->AddToViewport();
+			bShowMouseCursor = true;
+			SetInputMode(FInputModeGameAndUI());   // 버튼 클릭 + 키 둘 다
+			FCrazyRooDebug::Print(this, TEXT("역할 선택 위젯 표시"), FColor::Cyan);
+		}
+	}
+
 }
 
 void ACrazyRooPlayerController::SetupInputComponent()
@@ -71,4 +86,32 @@ bool ACrazyRooPlayerController::ShouldUseTouchControls() const
 {
 	// are we on a mobile platform? Should we force touch?
 	return SVirtualJoystick::ShouldDisplayTouchInterface() || bForceTouchControls;
+}
+
+void ACrazyRooPlayerController::RequestRole(ECrazyRooPlayerRole DesiredRole)
+{
+	// 버튼은 서버에 요청만. 판정은 서버
+	ServerRequestRole(DesiredRole);
+}
+
+void ACrazyRooPlayerController::ClientRoleRejected_Implementation(ECrazyRooPlayerRole DeniedRole)
+{
+	// 그 클라에서 실행됨 → UI 메시지
+	const FString Msg = FString::Printf(TEXT("[거부] %s 는 이미 배정된 역할입니다"),
+		CrazyRooRoleToString(DeniedRole));
+	FCrazyRooDebug::Print(this, Msg, FColor::Red);
+
+	OnRoleRejected.Broadcast(DeniedRole);
+}
+
+void ACrazyRooPlayerController::ServerRequestRole_Implementation(ECrazyRooPlayerRole DesiredRole)
+{
+	// 서버에서 실행됨
+	if (ACrazyRooGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ACrazyRooGameMode>() : nullptr)
+	{
+		if (!GM->RequestRole(this, DesiredRole))
+		{
+			ClientRoleRejected(DesiredRole);   // 거부 → 요청한 클라에게만
+		}
+	}
 }

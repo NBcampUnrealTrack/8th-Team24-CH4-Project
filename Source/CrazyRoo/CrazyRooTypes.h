@@ -25,16 +25,16 @@ enum class ECrazyRooPlayerRole : uint8
 };
 
 /** 전체 게임 진행 상태 enum. GameState에 복제되어 모든 클라이언트가 공유 */
-UENUM(BlueprintType)
-enum class ECrazyRooGameState : uint8
-{
-	WaitingForPlayers	UMETA(DisplayName = "Waiting For Players"),	    // 인원 기다리는 상태
-	RoleSelection		UMETA(DisplayName = "Role Selection"),			// 역할 선택 및 준비
-	Countdown			UMETA(DisplayName = "Countdown"),				// 시작 타이머
-	Running				UMETA(DisplayName = "Running"),				    // 게임 중
-	GameOver			UMETA(DisplayName = "Game Over"),				// 게임 오버
-	Result				UMETA(DisplayName = "Result")					// 스테이지 결과
-};
+//UENUM(BlueprintType)
+//enum class ECrazyRooGameState : uint8
+//{
+//	WaitingForPlayers	UMETA(DisplayName = "Waiting For Players"),	    // 인원 기다리는 상태
+//	RoleSelection		UMETA(DisplayName = "Role Selection"),			// 역할 선택 및 준비
+//	Countdown			UMETA(DisplayName = "Countdown"),				// 시작 타이머
+//	Running				UMETA(DisplayName = "Running"),				    // 게임 중
+//	GameOver			UMETA(DisplayName = "Game Over"),				// 게임 오버
+//	Result				UMETA(DisplayName = "Result")					// 스테이지 결과
+//};
 
 /** 3개 레인 중 현재 위치. */
 UENUM(BlueprintType)
@@ -90,20 +90,38 @@ struct FCrazyRooStageInfo
 //  UI / 게임플레이 바인딩용 동적 멀티캐스트 델리게이트
 // ---------------------------------------------------------------------------
 
+/** 역할 요청이 거부됐을 때 (PlayerController → UI) */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleRejected, ECrazyRooPlayerRole, DeniedRole);
+
 /** 매치 상태가 바뀔 때 (GameState) */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooMatchStateChanged, ECrazyRooGameState, NewState);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooMatchStateChanged, ECrazyRooGameState, NewState);
 
 /** 역할 선택(로비)에서 역할이 바뀔 때 (PlayerState) */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleChanged, ECrazyRooPlayerRole, NewRole);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleChanged, ECrazyRooPlayerRole, NewRole);
 
 /** 공유 HP 가 바뀔 때 (GameState) */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCrazyRooHealthChanged, int32, NewHP, int32, MaxHP);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCrazyRooHealthChanged, int32, NewHP, int32, MaxHP);
 
 /** 카운트다운 숫자가 바뀔 때 (GameState) */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooCountdownChanged, int32, SecondsLeft);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooCountdownChanged, int32, SecondsLeft);
 
 /** 플레이어가 준비 하거나 취소를 해서 상태를 바꿨을 때 (PlayerState) */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooReadyChanged, bool, bIsReady);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooReadyChanged, bool, bIsReady);
 
 /** 주행 거리나 점수가 올라갔을 때*/
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCrazyRooScoreChanged, float, RunDistance, int32, Score);
+
+
+
+// 비대칭 조작 역할 Enum을 문자열 변환
+inline const TCHAR* CrazyRooRoleToString(ECrazyRooPlayerRole R)
+{
+	switch (R)
+	{
+	case ECrazyRooPlayerRole::P_Left:    return TEXT("P_Left");
+	case ECrazyRooPlayerRole::P_Right:   return TEXT("P_Right");
+	case ECrazyRooPlayerRole::P_Shooter: return TEXT("P_Shooter");
+	case ECrazyRooPlayerRole::P_Acrobat: return TEXT("P_Acrobat");
+	default:                              return TEXT("None");
+	}
+}
