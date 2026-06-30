@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "CrazyRooTypes.h"
 #include "GameFramework/PlayerController.h"
 #include "CrazyRooPlayerController.generated.h"
 
@@ -14,6 +13,9 @@ class UUserWidget;
  *  Basic PlayerController class for a third person game
  *  Manages input mappings
  */
+enum class ECrazyRooPlayerRole : uint8;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleRejected, ECrazyRooPlayerRole, DeniedRole);
+
 UCLASS(abstract)
 class ACrazyRooPlayerController : public APlayerController
 {
@@ -51,7 +53,9 @@ protected:
 	bool ShouldUseTouchControls() const;
 
 public:
-	// UI 버튼이 호출
+
+	//테스트 용 UI 호출 함수
+	// UI 버튼이 클릭되었을 때 호출하는 함수
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Lobby")
 	void RequestRole(ECrazyRooPlayerRole DesiredRole);
 
@@ -59,21 +63,30 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo|Lobby")
 	FOnCrazyRooRoleRejected OnRoleRejected;
 
-	//테스트용
-	/** 역할 선택 위젯 클래스 (BP 에서 WBP_RoleSelect 지정) */
+	/** 역할 선택 위젯 클래스 */
 	UPROPERTY(EditAnywhere, Category = "CrazyRoo|UI")
 	TSubclassOf<UUserWidget> RoleSelectWidgetClass;
 
-	/** 생성된 역할 선택 위젯 인스턴스 */
+	/** 화면에 띄워진 역할 선택 위젯의 인스턴스 */
 	UPROPERTY()
 	TObjectPtr<UUserWidget> RoleSelectWidget;
+
+	// "시작" 버튼이 호출. 어느 맵으로 갈지 MapId 로 지정
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Lobby")
+	void RequestMap(FName MapId);
+
 	//
 
 protected:
-	UFUNCTION(Server, Reliable)
-	void ServerRequestRole(ECrazyRooPlayerRole DesiredRole);
 
+	// [Client] 서버가 이미 선택된 역할이라고 거부하는 함수입니다.
 	UFUNCTION(Client, Reliable)
 	void ClientRoleRejected(ECrazyRooPlayerRole DeniedRole);
 
+	// [Server] 내 컴퓨터가 서버한테 동작을 한다고 요청하는 함수입니다 (Reliable: 무조건 전송 보장)
+	UFUNCTION(Server, Reliable)
+	void ServerRequestRole(ECrazyRooPlayerRole DesiredRole);
+
+	UFUNCTION(Server, Reliable)
+	void ServerTravel(FName MapId);
 };

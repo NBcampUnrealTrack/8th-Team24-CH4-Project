@@ -4,6 +4,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/DataTable.h"
 #include "CrazyRooTypes.generated.h"
 
 /**
@@ -24,6 +25,26 @@ enum class ECrazyRooPlayerRole : uint8
 	P_Acrobat	UMETA(DisplayName = "Acrobat")
 };
 
+/** 스테이지를 어딜 갈지 저장하는 구조체 (데이터 테이블 표에 사용되는 구조체입니다) */
+USTRUCT(BlueprintType)
+struct FCrazyRooStageInfo : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	/** 맵 식별자 (예: "Title", "Select", "Stage1") — 코드에서 이걸로 찾음 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map")
+	FName MapId = NAME_None;
+
+	/** UI에 띄워줄 맵 이름 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
+	FText DisplayName;
+
+	/** 읽어들일 실제 맵 (소프트 레퍼런스 - 파일 경로가 바뀌어도 안전함) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
+	TSoftObjectPtr<UWorld> Level;
+};
+
+
 /** 전체 게임 진행 상태 enum. GameState에 복제되어 모든 클라이언트가 공유 */
 //UENUM(BlueprintType)
 //enum class ECrazyRooGameState : uint8
@@ -37,91 +58,32 @@ enum class ECrazyRooPlayerRole : uint8
 //};
 
 /** 3개 레인 중 현재 위치. */
-UENUM(BlueprintType)
-enum class ECrazyRooLane : uint8
-{
-	Left	UMETA(DisplayName = "Left"),
-	Center	UMETA(DisplayName = "Center"),
-	Right	UMETA(DisplayName = "Right")
-};
+//UENUM(BlueprintType)
+//enum class ECrazyRooLane : uint8
+//{
+//	Left	UMETA(DisplayName = "Left"),
+//	Center	UMETA(DisplayName = "Center"),
+//	Right	UMETA(DisplayName = "Right")
+//};
 
 /** 카메라 방향 전환 방향. Shooter가 카메라 상태를 변경 가능하게 함 */
-UENUM(BlueprintType)
-enum class ECrazyRooCameraDirection : uint8
-{
-	None	UMETA(DisplayName = "None"),
-	Left	UMETA(DisplayName = "Left"),
-	Right	UMETA(DisplayName = "Right")
-};
+//UENUM(BlueprintType)
+//enum class ECrazyRooCameraDirection : uint8
+//{
+//	None	UMETA(DisplayName = "None"),
+//	Left	UMETA(DisplayName = "Left"),
+//	Right	UMETA(DisplayName = "Right")
+//};
 
 /** 상/하단 회피 입력 상태. */
-UENUM(BlueprintType)
-enum class ECrazyRooDodgeType : uint8
-{
-	None	UMETA(DisplayName = "None"),
-	Jump	UMETA(DisplayName = "Jump"),
-	Duck	UMETA(DisplayName = "Duck")
-};
-
-/** 스테이지 선택 정보. GameInstance에 보관되어 레벨 이동 시 유지된다. */
-USTRUCT(BlueprintType)
-struct FCrazyRooStageInfo
-{
-	GENERATED_BODY()
-
-	/** 스테이지 고유 ID */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
-	FName StageId = NAME_None;
-
-	/** UI에 표시할 맵 이름 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
-	FText DisplayName;
-
-	/** 읽어들일 실제 맵 (소프트 레퍼런스) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
-	TSoftObjectPtr<UWorld> Level;
-
-	/** 해당 맵의 기본 주행 속도 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
-	float StageBaseRunSpeed = 1200.f;
-};
-
-// ---------------------------------------------------------------------------
-//  UI / 게임플레이 바인딩용 동적 멀티캐스트 델리게이트
-// ---------------------------------------------------------------------------
-
-/** 역할 요청이 거부됐을 때 (PlayerController → UI) */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleRejected, ECrazyRooPlayerRole, DeniedRole);
-
-/** 매치 상태가 바뀔 때 (GameState) */
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooMatchStateChanged, ECrazyRooGameState, NewState);
-
-/** 역할 선택(로비)에서 역할이 바뀔 때 (PlayerState) */
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleChanged, ECrazyRooPlayerRole, NewRole);
-
-/** 공유 HP 가 바뀔 때 (GameState) */
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCrazyRooHealthChanged, int32, NewHP, int32, MaxHP);
-
-/** 카운트다운 숫자가 바뀔 때 (GameState) */
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooCountdownChanged, int32, SecondsLeft);
-
-/** 플레이어가 준비 하거나 취소를 해서 상태를 바꿨을 때 (PlayerState) */
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooReadyChanged, bool, bIsReady);
-
-/** 주행 거리나 점수가 올라갔을 때*/
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCrazyRooScoreChanged, float, RunDistance, int32, Score);
+//ENUM(BlueprintType)
+//num class ECrazyRooDodgeType : uint8
+//
+//	None	UMETA(DisplayName = "None"),
+//	Jump	UMETA(DisplayName = "Jump"),
+//	Duck	UMETA(DisplayName = "Duck")
+//;
 
 
-
-// 비대칭 조작 역할 Enum을 문자열 변환
-inline const TCHAR* CrazyRooRoleToString(ECrazyRooPlayerRole R)
-{
-	switch (R)
-	{
-	case ECrazyRooPlayerRole::P_Left:    return TEXT("P_Left");
-	case ECrazyRooPlayerRole::P_Right:   return TEXT("P_Right");
-	case ECrazyRooPlayerRole::P_Shooter: return TEXT("P_Shooter");
-	case ECrazyRooPlayerRole::P_Acrobat: return TEXT("P_Acrobat");
-	default:                              return TEXT("None");
-	}
-}
+// 비대칭 조작 역할 Enum을 문자열 변환 (구현은 CrazyRooTypes.cpp)
+const TCHAR* CrazyRooRoleToString(ECrazyRooPlayerRole R);

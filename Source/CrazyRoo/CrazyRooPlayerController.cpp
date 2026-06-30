@@ -8,6 +8,7 @@
 #include "Blueprint/UserWidget.h"
 #include "CrazyRoo.h"
 #include "CrazyRooGameMode.h"
+#include "CrazyRooTypes.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
 void ACrazyRooPlayerController::BeginPlay()
@@ -40,15 +41,18 @@ void ACrazyRooPlayerController::BeginPlay()
 
 	}
 
-	// 역할 선택 위젯: 로컬 클라에서만 띄움 (데디 서버는 화면 없으니 자동 제외)
+	// IsLocalPlayerController()는 이 컨트롤러가 내 컴퓨터에 연결된 것인지 묻는 함수입니다.
+	// 서버에는 4명의 컨트롤러 다 있지만, UI는 내 화면에만 띄워야 하므로 검사합니다.
+
+	// 역할 선택 위젯: 내 로컬 클라에서만 띄움. 데디 서버는 화면이 없으므로 제외됨.
 	if (IsLocalController() && RoleSelectWidgetClass)
 	{
 		RoleSelectWidget = CreateWidget<UUserWidget>(this, RoleSelectWidgetClass);
 		if (RoleSelectWidget)
 		{
 			RoleSelectWidget->AddToViewport();
-			bShowMouseCursor = true;
-			SetInputMode(FInputModeGameAndUI());   // 버튼 클릭 + 키 둘 다
+			bShowMouseCursor = true;// 마우스 활성화
+			SetInputMode(FInputModeGameAndUI());  // 마우스와 키보드 모두 작동하게 설정
 			FCrazyRooDebug::Print(this, TEXT("역할 선택 위젯 표시"), FColor::Cyan);
 		}
 	}
@@ -88,21 +92,27 @@ bool ACrazyRooPlayerController::ShouldUseTouchControls() const
 	return SVirtualJoystick::ShouldDisplayTouchInterface() || bForceTouchControls;
 }
 
+// UI의 버튼을 클릭하면 블루프린트에서 이 함수를 호출
 void ACrazyRooPlayerController::RequestRole(ECrazyRooPlayerRole DesiredRole)
 {
-	// 버튼은 서버에 요청만. 판정은 서버
+	// 즉시 서버 RPC 호출
 	ServerRequestRole(DesiredRole);
 }
 
-void ACrazyRooPlayerController::ClientRoleRejected_Implementation(ECrazyRooPlayerRole DeniedRole)
+void ACrazyRooPlayerController::RequestMap(FName MapId)
 {
-	// 그 클라에서 실행됨 → UI 메시지
-	const FString Msg = FString::Printf(TEXT("[거부] %s 는 이미 배정된 역할입니다"),
-		CrazyRooRoleToString(DeniedRole));
-	FCrazyRooDebug::Print(this, Msg, FColor::Red);
-
-	OnRoleRejected.Broadcast(DeniedRole);
+	ServerTravel(MapId);
 }
+
+void ACrazyRooPlayerController::ServerTravel_Implementation(FName MapId)
+{
+	// 서버에서 실행됨 → GameMode 에 트래블 위임
+	if (ACrazyRooGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ACrazyRooGameMode>() : nullptr)
+	{
+		GM->ChangeMap(MapId);
+	}
+}
+
 
 void ACrazyRooPlayerController::ServerRequestRole_Implementation(ECrazyRooPlayerRole DesiredRole)
 {
@@ -114,4 +124,14 @@ void ACrazyRooPlayerController::ServerRequestRole_Implementation(ECrazyRooPlayer
 			ClientRoleRejected(DesiredRole);   // 거부 → 요청한 클라에게만
 		}
 	}
+}
+
+void ACrazyRooPlayerController::ClientRoleRejected_Implementation(ECrazyRooPlayerRole DeniedRole)
+{
+	// 그 클라에서 실행됨 → UI 메시지
+	const FString Msg = FString::Printf(TEXT("[거부] %s 는 이미 배정된 역할입니다"),
+		CrazyRooRoleToString(DeniedRole));
+	FCrazyRooDebug::Print(this, Msg, FColor::Red);
+
+	OnRoleRejected.Broadcast(DeniedRole);
 }
