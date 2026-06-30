@@ -18,13 +18,19 @@ public class CrazyRoo : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			"OnlineSubsystem", // 주요 기능: 방 만들기(Create Session), 방 찾기(Find Session), 방 참가하기(Join Session), 친구 목록 불러오기, 업적 달성, 리더보드(랭킹) 등의 기능
+			"OnlineSubsystemUtils" //OnlineSubsystem 편하게 쓰기 위한 기능
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"CrazyRoo",
+			"CrazyRoo/Public/System",//
+			"CrazyRoo/Public/Player",//
+			"CrazyRoo/Private/System",//
+			"CrazyRoo/Private/Player",//
 			"CrazyRoo/Variant_Platforming",
 			"CrazyRoo/Variant_Platforming/Animation",
 			"CrazyRoo/Variant_Combat",
