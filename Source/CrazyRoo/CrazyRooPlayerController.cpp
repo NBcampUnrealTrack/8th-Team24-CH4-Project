@@ -10,6 +10,8 @@
 #include "CrazyRooGameMode.h"
 #include "CrazyRooTypes.h"
 #include "Widgets/Input/SVirtualJoystick.h"
+#include "Components/InputComponent.h"
+#include "System/CrazyRooLocalPlayerSubsystem.h"
 
 void ACrazyRooPlayerController::BeginPlay()
 {
@@ -33,27 +35,19 @@ void ACrazyRooPlayerController::BeginPlay()
 			// add the controls to the player screen
 			MobileControlsWidget->AddToPlayerScreen(0);
 
-		} else {
+		}
+		else
+		{
 
 			UE_LOG(LogCrazyRoo, Error, TEXT("Could not spawn mobile controls widget."));
-
 		}
-
 	}
 
-	// IsLocalPlayerController()는 이 컨트롤러가 내 컴퓨터에 연결된 것인지 묻는 함수입니다.
-	// 서버에는 4명의 컨트롤러 다 있지만, UI는 내 화면에만 띄워야 하므로 검사합니다.
-
-	// 역할 선택 위젯: 내 로컬 클라에서만 띄움. 데디 서버는 화면이 없으므로 제외됨.
-	if (IsLocalController() && RoleSelectWidgetClass)
+	if (ULocalPlayer* LP = GetLocalPlayer())
 	{
-		RoleSelectWidget = CreateWidget<UUserWidget>(this, RoleSelectWidgetClass);
-		if (RoleSelectWidget)
+		if (UCrazyRooLocalPlayerSubsystem* UISys = LP->GetSubsystem<UCrazyRooLocalPlayerSubsystem>())
 		{
-			RoleSelectWidget->AddToViewport();
-			bShowMouseCursor = true;// 마우스 활성화
-			SetInputMode(FInputModeGameAndUI());  // 마우스와 키보드 모두 작동하게 설정
-			FCrazyRooDebug::Print(this, TEXT("역할 선택 위젯 표시"), FColor::Cyan);
+			UISys->BindToGameState();   // 안전망 (자가 감지가 놓쳤을 때 대비)
 		}
 	}
 
@@ -62,6 +56,14 @@ void ACrazyRooPlayerController::BeginPlay()
 void ACrazyRooPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+
+	//테스트용 삭제 예정
+	//if (InputComponent)
+	//{
+	//	// 테스트용: T 키 누르면 TestStage 로 트래블
+	//	InputComponent->BindKey(EKeys::T, IE_Pressed, this, &ACrazyRooPlayerController::Key_TravelToStage);
+	//}
+	//
 
 	// only add IMCs for local player controllers
 	if (IsLocalPlayerController())
@@ -104,12 +106,20 @@ void ACrazyRooPlayerController::RequestMap(FName MapId)
 	ServerTravel(MapId);
 }
 
+//테스트용 삭제예정
+//void ACrazyRooPlayerController::Key_TravelToStage()
+//{
+//	FCrazyRooDebug::Print(this, TEXT("KEY T -> TestStage 트래블 요청"), FColor::Cyan);
+//	RequestMap(TEXT("TestStage"));
+//}
+//
+
 void ACrazyRooPlayerController::ServerTravel_Implementation(FName MapId)
 {
 	// 서버에서 실행됨 → GameMode 에 트래블 위임
 	if (ACrazyRooGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ACrazyRooGameMode>() : nullptr)
 	{
-		GM->ChangeMap(MapId);
+		GM->ChangeStage(MapId);
 	}
 }
 

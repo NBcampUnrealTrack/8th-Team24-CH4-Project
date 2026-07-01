@@ -15,3 +15,13 @@ const TCHAR* CrazyRooRoleToString(ECrazyRooPlayerRole R)
 	default:                              return TEXT("None");
 	}
 }
+
+const TCHAR* CrazyRooMatchStateToString(ECrazyRooStageState S)
+{
+	switch (S)
+	{
+	case ECrazyRooStageState::RoleSelection: return TEXT("RoleSelection");
+	case ECrazyRooStageState::InGame:        return TEXT("InGame");
+	default:                                 return TEXT("Nobe");
+	}
+}

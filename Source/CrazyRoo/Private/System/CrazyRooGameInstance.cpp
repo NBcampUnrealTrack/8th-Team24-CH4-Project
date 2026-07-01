@@ -2,9 +2,11 @@
 #include "System/CrazyRooGameInstance.h"
 #include "CrazyRooTypes.h"
 #include "CrazyRoo.h"
+#include "Blueprint/UserWidget.h"
 
 UCrazyRooGameInstance::UCrazyRooGameInstance()
 {
+
 }
 
 void UCrazyRooGameInstance::Init()
@@ -56,7 +58,7 @@ FString UCrazyRooGameInstance::GetStageMapPath(FName MapId) const
 	}
 
 	// Row Name(=MapId) 으로 행을 바로 찾음 (순회 없이 해시 조회)
-	const FCrazyRooStageInfo* Row = MapDataTable->FindRow<FCrazyRooStageInfo>(MapId, TEXT("GetStageMapPath"));
+	const FCrazyRooStageInfo* Row = FindStageRow(MapId);
 	if (!Row)
 	{
 		UE_LOG(LogCrazyRoo, Warning, TEXT("[GI] 맵 '%s' 를 테이블에서 못 찾음"), *MapId.ToString());
@@ -74,5 +76,25 @@ FString UCrazyRooGameInstance::GetStageMapPath(FName MapId) const
 	const FString Path = Row->Level.ToSoftObjectPath().GetLongPackageName();
 	UE_LOG(LogCrazyRoo, Warning, TEXT("[GI] 맵 '%s' 경로 = %s"), *MapId.ToString(), *Path);
 	return Path;
+}
+
+const FCrazyRooStageInfo* UCrazyRooGameInstance::FindStageRow(FName MapId) const
+{
+	if (!MapDataTable)
+	{
+		return nullptr;
+	}
+	return MapDataTable->FindRow<FCrazyRooStageInfo>(MapId, TEXT("FindStageRow"));
+}
+
+TSubclassOf<UUserWidget> UCrazyRooGameInstance::GetCurrentStageUIClass() const
+{
+	const FCrazyRooStageInfo* Row = FindStageRow(CurrentMapId);
+	if (!Row || Row->StageUIClass.IsNull())
+	{
+		return nullptr;
+	}
+	// Soft 참조 → 실제 로드 (동기 로드; 위젯은 가벼워서 OK)
+	return Row->StageUIClass.LoadSynchronous();
 }
 

@@ -23,6 +23,7 @@ void ACrazyRooGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	FCrazyRooDebug::Print(this, TEXT("GameMode BeginPlay (서버 시작됨)"), FColor::Cyan);
+
 }
 
 // 플레이어가 서버에 접속을 완료했을 때 실행됨
@@ -40,6 +41,7 @@ void ACrazyRooGameMode::PostLogin(APlayerController* NewPlayer)
 
 	FCrazyRooDebug::Print(this, Msg, FColor::Green);
 
+	ApplyMatchStateForCurrentMap();
 }
 
 // 플레이어가 방을 나갔을 때 실행됨
@@ -57,21 +59,20 @@ void ACrazyRooGameMode::HandleSeamlessTravelPlayer(AController*& C)
 {
 	Super::HandleSeamlessTravelPlayer(C);
 
+	ACrazyRooPlayerState* PS = C ? C->GetPlayerState<ACrazyRooPlayerState>() : nullptr;
+	UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>();
 	// 맵 이동 직후 플레이어가 새로 생성된 PlayerState을 들고오기 때문에 GameInstance에 저장되어 있는 ID따라 배정해줘야함
-	if (ACrazyRooPlayerState* PS = C ? C->GetPlayerState<ACrazyRooPlayerState>() : nullptr)
+	if (PS && GI)
 	{
-		// 안 부서지고 살아남은 GameInstance에서 역할을 꺼내옴
-		if (UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>())
+		// [기존 코드] 역할 복원
+		const ECrazyRooPlayerRole Saved = GI->GetSavedPlayerRole(PS->GetPlayerId());
+		if (Saved != ECrazyRooPlayerRole::None)
 		{
-			const ECrazyRooPlayerRole Saved = GI->GetSavedPlayerRole(PS->GetPlayerId());
-			if (Saved != ECrazyRooPlayerRole::None)
-			{
-				// 복원 완료 이제 클라이언트들에게 역할이 다시 전송
-				PS->SetPlayerRole(Saved);
-			}
+			PS->SetPlayerRole(Saved);
 		}
 	}
 
+	ApplyMatchStateForCurrentMap();
 }
 
 // [Server] 클라이언트가 컨트롤러를 통해 역할을 요청했을 때 판정하는 함수
@@ -115,7 +116,6 @@ bool ACrazyRooGameMode::RequestRole(APlayerController* Player, ECrazyRooPlayerRo
 	// -------------------------------------------------------------
 	// 정상적으로 역할을 승인하는 경우 처리
 	// -------------------------------------------------------------
-	PS->SetPlayerRole(DesiredRole);
 
 	//GameInstance에 플레이어 역할 저장
 	PS->SetPlayerRole(DesiredRole);
@@ -132,7 +132,7 @@ bool ACrazyRooGameMode::RequestRole(APlayerController* Player, ECrazyRooPlayerRo
 	return true;
 }
 
-void ACrazyRooGameMode::ChangeMap(FName MapId)
+void ACrazyRooGameMode::ChangeStage(FName MapId)
 {
 	UWorld* World = GetWorld();
 	UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>();
@@ -141,25 +141,21 @@ void ACrazyRooGameMode::ChangeMap(FName MapId)
 		return;
 	}
 
-	// 입력받은 MapId("Stage_1")에 해당하는 맵 에셋의 '절대 경로 문자열'을 꺼내옴
 	const FString Path = GI->GetStageMapPath(MapId);
 	if (Path.IsEmpty())
 	{
 		FCrazyRooDebug::Print(this, FString::Printf(TEXT("거부: 맵 '%s' 경로를 찾을 수 없음"), *MapId.ToString()), FColor::Red);
 		return;
 	}
+
+	// 도착 후 MatchState 결정에 쓸 MapId 저장
+	GI->CurrentMapId = MapId;
+
 	// 레벨 이동 시 로그
 	FCrazyRooDebug::Print(this, FString::Printf(TEXT("맵 '%s' 로 이동: %s"), *MapId.ToString(), *Path), FColor::Cyan);
 
-	//  방장이 맵을 이동하면서 클라이언트들을 다 끌고 가는 명령
-	// "?listen" 을 맵 경로 뒤에 꼬리표처럼 붙여줍니다. (예: "/Game/Maps/Stage_1?listen")
-	World->ServerTravel(Path + TEXT("?listen"));
-	/*
-	 *언리얼 엔진에서 유저 중 한 명이 방장이 되어 플레이하는 방식(호스트/리슨 서버 환경)일 때, 방장이 ServerTravel로 맵을 열면 엔진은 기본적으로 "어? 방장 혼자 싱글 플레이하러 가는구나!" 하고 착각해서 열어버립니다. 이러면 같이 가던 클라이언트들의 연결이 다 끊어지고 로비로 튕겨버립니다.
-	 *이때 맵 경로 뒤에 ?listen 옵션을 붙여주면, 엔진에게 다음과 같이 강력하게 지시하는 효과가 있습니다.
-	 *방장 혼자 가는게 아니라 새 맵으로 넘어가서도 계속 서버 통신 포트 열어두고(listen), 같이 넘어오는 클라이언트들을 계속 접속상태로 유지해
-	 *즉, 이 함수는 데이터 테이블 기반의 맵 관리와 멀티플레이어 환경의 맵 이동 안전장치를 모두 코드
-	 */
+	World->ServerTravel( Path);
+
 }
 
 // 빈 역할을 찾아주는 함수입니다.
@@ -207,4 +203,33 @@ bool ACrazyRooGameMode::IsRoleTaken(ECrazyRooPlayerRole PlayerRole) const
 		}
 	}
 	return false;
+}
+
+void ACrazyRooGameMode::ApplyMatchStateForCurrentMap()
+{
+	ACrazyRooGameState* GS = GetGameState<ACrazyRooGameState>();
+	UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>();
+	if (!GS || !GI)
+	{
+		return;
+	}
+
+	// CurrentMapId를 만약 None으로 되어있으면 NewState에 처음 나오는 Map에 State를 설정(방어코드)
+	ECrazyRooStageState NewState = ECrazyRooStageState::RoleSelection;//여기에 첫 시작 기본 값을 넣어도 됨
+
+	if (const FCrazyRooStageInfo* Row = GI->FindStageRow(GI->CurrentMapId))
+	{
+		NewState = Row->MatchState;
+		FCrazyRooDebug::Print(this, FString::Printf(
+			TEXT("맵 '%s' 의 MatchState = %s"),
+			*GI->CurrentMapId.ToString(), CrazyRooMatchStateToString(NewState)), FColor::Cyan);
+	}
+	else
+	{
+		FCrazyRooDebug::Print(this, FString::Printf(
+			TEXT("맵 '%s' 행 못찾음 → 기본 초기값"),
+			*GI->CurrentMapId.ToString()), FColor::Orange);
+	}
+
+	GS->SetStageState(NewState);
 }

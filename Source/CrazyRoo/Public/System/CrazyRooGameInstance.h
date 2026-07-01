@@ -6,6 +6,8 @@
 #include "CrazyRooGameInstance.generated.h"
 
 enum class ECrazyRooPlayerRole : uint8;
+class UUserWidget;
+struct FCrazyRooStageInfo;
 
 UCLASS()
 class CRAZYROO_API UCrazyRooGameInstance : public UGameInstance
@@ -30,7 +32,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Role")
 	void ClearSavedRoles();
 
-
 	//맵 정보 저장하는 곳
 	/** 맵 데이터 테이블  */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Map")
@@ -38,6 +39,16 @@ public:
 
 	/** 맵 식별자(MapId 또는 Row Name)를 주면 데이터 테이블에서 맵의 절대 경로 문자열을 뽑아주는 헬퍼 */
 	FString GetStageMapPath(FName MapId) const;
+
+	/** MapId(Row Name)로 데이터 테이블 행 전체를 찾아 반환. 못 찾으면 nullptr */
+	const FCrazyRooStageInfo* FindStageRow(FName MapId) const;
+
+	/**  도착한 맵의 MapId. 트래블 시 저장, 도착 후 MatchState 결정에 사용 */
+	UPROPERTY()
+	FName CurrentMapId = TEXT("TestMap");//여기에 초기값을 할당해서 바로 처음 나오는 맵을 나오게 가능, NAME_None
+
+	/** 현재 맵(CurrentMapId)의 UI 위젯 클래스를 데이터 테이블에서 가져옴 (없으면 nullptr) */
+	TSubclassOf<UUserWidget> GetCurrentStageUIClass() const;
 
 protected:
 	// 플레이어의 고유 ID와 선택한 역할을 저장하는 Map

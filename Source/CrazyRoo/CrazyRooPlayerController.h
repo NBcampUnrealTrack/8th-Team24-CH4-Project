@@ -8,12 +8,8 @@
 
 class UInputMappingContext;
 class UUserWidget;
-
-/**
- *  Basic PlayerController class for a third person game
- *  Manages input mappings
- */
 enum class ECrazyRooPlayerRole : uint8;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleRejected, ECrazyRooPlayerRole, DeniedRole);
 
 UCLASS(abstract)
@@ -54,7 +50,7 @@ protected:
 
 public:
 
-	//테스트 용 UI 호출 함수
+	// 역할 변경 상호작용파트
 	// UI 버튼이 클릭되었을 때 호출하는 함수
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Lobby")
 	void RequestRole(ECrazyRooPlayerRole DesiredRole);
@@ -63,19 +59,16 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo|Lobby")
 	FOnCrazyRooRoleRejected OnRoleRejected;
 
-	/** 역할 선택 위젯 클래스 */
-	UPROPERTY(EditAnywhere, Category = "CrazyRoo|UI")
-	TSubclassOf<UUserWidget> RoleSelectWidgetClass;
-
-	/** 화면에 띄워진 역할 선택 위젯의 인스턴스 */
-	UPROPERTY()
-	TObjectPtr<UUserWidget> RoleSelectWidget;
-
 	// "시작" 버튼이 호출. 어느 맵으로 갈지 MapId 로 지정
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Lobby")
 	void RequestMap(FName MapId);
-
 	//
+
+	//맵 이동 테스트 함수 삭졔 할 수도 있음
+	//void Key_TravelToStage();
+	//
+
+
 
 protected:
 

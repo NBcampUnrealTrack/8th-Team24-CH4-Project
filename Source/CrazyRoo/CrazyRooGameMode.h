@@ -32,7 +32,8 @@ public:
 
 	// [Server] MapId 에 해당하는 맵으로 모든 플레이어이동
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo")
-	void ChangeMap(FName MapId);
+	void ChangeStage(FName MapId);
+
 
 protected:
 
@@ -43,6 +44,9 @@ protected:
 	// 특정 역할이 이미 배정됐는지
 	// 방에 있는 플레이어를 돌아 검사해 겹치는 역할이 있는지 검사합니다.
 	bool IsRoleTaken(ECrazyRooPlayerRole PlayerRole) const;
+
+	/** GameInstance 의 CurrentMapId 로 데이터 테이블 찾아 MatchState 를 GameState 에 설정 */
+	void ApplyMatchStateForCurrentMap();
 };
 
 
