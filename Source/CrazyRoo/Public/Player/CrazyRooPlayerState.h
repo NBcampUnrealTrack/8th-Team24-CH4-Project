@@ -14,7 +14,7 @@ class CRAZYROO_API ACrazyRooPlayerState : public APlayerState
 public:
 	// 기본 생성자
 	ACrazyRooPlayerState();
-public:
+
 	virtual void BeginPlay() override;
 
 	//  복제할 변수(PlayerRole)를 엔진에 등록합니다. (이게 있어야 클라로 전송함)
@@ -28,6 +28,13 @@ public:
 	// 오직 서버의 GameMode만 이 함수를 통해 내 역할을 강제로 바꿀 수 있음
 	void SetPlayerRole(ECrazyRooPlayerRole NewRole);
 
+	// 몇 번째로 접속했는지 (확인)
+	UFUNCTION(BlueprintPure, Category = "CrazyRoo")
+	int32 GetJoinOrder() const ;
+
+	// [Server Only]
+	void SetJoinOrder(int32 InJoinOrder);
+
 protected:
 	// 내 역할 변수입니다.
 	// ReplicatedUsing = OnRep_PlayerRole 의 의미: "서버가 이 값을 바꿔서 내 클라로 전송이 완료되는 순간, 즉시 OnRep_PlayerRole() 함수를 자동 실행해라" 라는 뜻
@@ -37,4 +44,8 @@ protected:
 	// 변경된 데이터가 클라이언트에 무사히 도착했을 때 실행되어 화면(UI)을 갱신하는 함수
 	UFUNCTION()
 	void OnRep_PlayerRole();
+
+	//접속 순번 (서버가 부여, 클라로 리플리케이트)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "CrazyRoo")
+	int32 JoinOrder = 0;
 };

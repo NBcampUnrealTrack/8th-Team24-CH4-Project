@@ -16,6 +16,18 @@ void UCrazyRooGameInstance::Init()
 	UE_LOG(LogCrazyRoo, Warning, TEXT("GameInstance Init (프로세스마다 1개)"));
 }
 
+void UCrazyRooGameInstance::SavePlayerJoinOrder(int32 PlayerId, int32 JoinOrder)
+{
+	SavedJoinOrders.Add(PlayerId, JoinOrder);
+	UE_LOG(LogCrazyRoo, Warning, TEXT("[GI] SaveJoinOrder Id=%d -> %d"), PlayerId, JoinOrder);
+}
+
+int32 UCrazyRooGameInstance::GetSavedPlayerJoinOrder(int32 PlayerId) const
+{
+	const int32* Found = SavedJoinOrders.Find(PlayerId);
+	return Found ? *Found : 0;
+}
+
 void UCrazyRooGameInstance::SavePlayerRole(int32 PlayerId, ECrazyRooPlayerRole Role)
 {
 	// 만약 플레이어가 None(취소) 했다면 Map에서 삭제

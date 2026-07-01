@@ -47,6 +47,10 @@ protected:
 
 	/** GameInstance 의 CurrentMapId 로 데이터 테이블 찾아 MatchState 를 GameState 에 설정 */
 	void ApplyMatchStateForCurrentMap();
+
+	// 접속할 플레이어에게 부여할 번호 (1부터 증가) 삭제 가능
+	int32 NextJoinOrder = 1;
+
 };
 
 

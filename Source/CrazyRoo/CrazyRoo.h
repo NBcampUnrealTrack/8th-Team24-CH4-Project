@@ -16,4 +16,6 @@ public:
 
 	// 2. 화면과 로그창에 동시에 예쁘게 메시지를 띄워주는 함수
 	static void Print(const UObject* ContextObject, const FString& Message, FColor Color = FColor::White, float TimeToDisplay = 5.0f);
+
+	static void PrintSystem(const UObject* ContextObject, const FString& Message, FColor Color = FColor::White, float TimeToDisplay = 5.0f);
 };

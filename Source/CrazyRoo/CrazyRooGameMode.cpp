@@ -31,6 +31,22 @@ void ACrazyRooGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
+	// 접속 순번 부여 + GameInstance에 백업 저장 (트래블 후 PlayerState 재생성 대비)
+	if (ACrazyRooPlayerState* PS = NewPlayer ? NewPlayer->GetPlayerState<ACrazyRooPlayerState>() : nullptr)
+	{
+		UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>();
+		const int32 Order = NextJoinOrder++;
+		PS->SetJoinOrder(Order);
+
+		if (GI)
+		{
+			GI->SavePlayerJoinOrder(PS->GetPlayerId(), Order);
+		}
+
+		// ★ 누가 몇 번째로 들어왔는지 명확히 로그
+		FCrazyRooDebug::Print(this, FString::Printf(TEXT("플레이어-%d 접속 완료"), Order), FColor::Green);
+	}
+
 	// 데디 서버 기준: 접속한 PC 는 모두 원격이므로 IsLocal 은 0 이어야 정상
 	// 접속한 총 인원수와 현재 접속한 사람의 정보를 로그로 출력 (데디 서버 디버깅용)
 	const int32 Num = GetNumPlayers();
@@ -63,6 +79,13 @@ void ACrazyRooGameMode::HandleSeamlessTravelPlayer(AController*& C)
 	// 맵 이동 직후 플레이어가 새로 생성된 PlayerState을 들고오기 때문에 GameInstance에 저장되어 있는 ID따라 배정해줘야함
 	if (PS && GI)
 	{
+		// 접속 순번 복원(언제든 삭제 가능)
+		const int32 SavedOrder = GI->GetSavedPlayerJoinOrder(PS->GetPlayerId());
+		if (SavedOrder > 0)
+		{
+			PS->SetJoinOrder(SavedOrder);
+		}
+
 		// [기존 코드] 역할 복원
 		const ECrazyRooPlayerRole Saved = GI->GetSavedPlayerRole(PS->GetPlayerId());
 		if (Saved != ECrazyRooPlayerRole::None)
@@ -106,8 +129,8 @@ bool ACrazyRooGameMode::RequestRole(APlayerController* Player, ECrazyRooPlayerRo
 	if (IsRoleTaken(DesiredRole))
 	{
 		// 접근시 로그를 띄우고 false(거부) 반환
-		const FString Msg = FString::Printf(TEXT("[SERVER] RequestRole 거부: %s 는 이미 사용중 (요청자=%s)"),
-			CrazyRooRoleToString(DesiredRole), *PS->GetName());
+		const FString Msg = FString::Printf(TEXT("[SERVER] 플레이어-%d 요청 거부: %s 는 이미 사용중"),
+			PS->GetJoinOrder(), CrazyRooRoleToString(DesiredRole));
 		FCrazyRooDebug::Print(this, Msg, FColor::Red);
 		return false;
 	}
@@ -124,8 +147,8 @@ bool ACrazyRooGameMode::RequestRole(APlayerController* Player, ECrazyRooPlayerRo
 	}
 
 	//디버그 메시지
-	const FString Msg = FString::Printf(TEXT("[SERVER] RequestRole 승인: %s -> %s"),
-		*PS->GetName(), CrazyRooRoleToString(DesiredRole));
+	const FString Msg = FString::Printf(TEXT("[SERVER] 플레이어-%d 역할 승인 -> %s"),
+		PS->GetJoinOrder(), CrazyRooRoleToString(DesiredRole));
 	FCrazyRooDebug::Print(this, Msg, FColor::Green);
 
 	return true;

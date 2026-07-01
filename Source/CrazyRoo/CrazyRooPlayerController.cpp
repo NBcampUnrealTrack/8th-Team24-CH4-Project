@@ -17,11 +17,12 @@ void ACrazyRooPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+
 	// 서버엔 모든 PC, 각 클라엔 자기 것(Local=1) 하나만 존재
 	const FString Msg = FString::Printf(
 		TEXT("PlayerController BeginPlay (Local=%d)"),
 		IsLocalController() ? 1 : 0);
-	FCrazyRooDebug::Print(this, Msg, FColor::Magenta);
+	FCrazyRooDebug::Print(this, Msg, FColor::Magenta);//PlayerState 생성보다 먼저이기 때문에 Player?가 나오는게 당연하다
 
 
 	// only spawn touch controls on local player controllers

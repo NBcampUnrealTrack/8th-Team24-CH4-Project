@@ -15,8 +15,8 @@ void ACrazyRooGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// GameState 는 서버 + 모든 클라에 존재 → 서버 로그 1번 + 각 클라 화면 1번씩
-	FCrazyRooDebug::Print(this, TEXT("GameState BeginPlay"), FColor::White);
+
+	FCrazyRooDebug::PrintSystem(this, TEXT("GameState BeginPlay"), FColor::White);
 }
 
 void ACrazyRooGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -48,7 +48,8 @@ void ACrazyRooGameState::SetCurrentMapId(FName NewMapId)
 
 void ACrazyRooGameState::OnRep_CurrentMapId()
 {
-	FCrazyRooDebug::Print(this, FString::Printf(TEXT("[CLIENT] OnRep_CurrentMapId = %s"), *CurrentMapId.ToString()), FColor::White);
+	//레벨 넘어갈때 여기가 호출되면서 playerState가 없어서 ?가 나오는거 같음 호출 시기에
+	FCrazyRooDebug::PrintSystem(this, FString::Printf(TEXT("OnRep_CurrentMapId = %s"), *CurrentMapId.ToString()), FColor::White);
 
 	OnCurrentMapChanged.Broadcast(CurrentMapId);
 }

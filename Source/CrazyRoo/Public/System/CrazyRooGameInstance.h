@@ -20,6 +20,14 @@ public:
 
 	virtual void Init() override;
 
+	// 플레이어 순번 확인용
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Role")
+	void SavePlayerJoinOrder(int32 PlayerId, int32 JoinOrder);
+
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Role")
+	int32 GetSavedPlayerJoinOrder(int32 PlayerId) const;
+	//
+
 	// 특정 PlayerId가 로비에서 무슨 역할을 골랐는지 Map에 저장하는 함수
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Role")
 	void SavePlayerRole(int32 PlayerId, ECrazyRooPlayerRole Role);
@@ -51,4 +59,7 @@ protected:
 	// 플레이어의 고유 ID와 선택한 역할을 저장하는 Map
 	UPROPERTY()
 	TMap<int32, ECrazyRooPlayerRole> SavedRoles;
+
+	UPROPERTY()
+	TMap<int32, int32> SavedJoinOrders;
 };
