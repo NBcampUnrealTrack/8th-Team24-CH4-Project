@@ -32,7 +32,7 @@ public:
 
 	// [Server] MapId 에 해당하는 맵으로 모든 플레이어이동
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo")
-	void ChangeStage(FName MapId);
+	void ChangeMap(FName MapId);
 
 
 protected:

@@ -8,7 +8,7 @@
 
 ACrazyRooGameState::ACrazyRooGameState()
 {
-	StageState = ECrazyRooStageState::RoleSelection;
+	CurrentMapId = NAME_None;
 }
 
 void ACrazyRooGameState::BeginPlay()
@@ -22,39 +22,33 @@ void ACrazyRooGameState::BeginPlay()
 void ACrazyRooGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ACrazyRooGameState, StageState);
+	DOREPLIFETIME(ACrazyRooGameState, CurrentMapId);
 }
 
-ECrazyRooStageState ACrazyRooGameState::GetStageState() const
+FName ACrazyRooGameState::GetCurrentMapId() const
 {
-	return StageState;
+	return CurrentMapId;
 }
 
-void ACrazyRooGameState::SetStageState(ECrazyRooStageState NewState)
+void ACrazyRooGameState::SetCurrentMapId(FName NewMapId)
 {
-	if (!HasAuthority() || StageState == NewState)
+	if (!HasAuthority() || CurrentMapId == NewMapId)
 	{
 		return;
 	}
 
-	StageState = NewState;
+	CurrentMapId = NewMapId;
 
-	// 서버(데디) 로그
 	FCrazyRooDebug::Print(this, FString::Printf(
-		TEXT("[SERVER] SetMatchState -> %s"), CrazyRooMatchStateToString(NewState)), FColor::White);
+		TEXT("[SERVER] CurrentMapId -> %s"), *CurrentMapId.ToString()), FColor::White);
 
-	// 클라이언트는 OnRep_MatchState가 자동으로 호출되어 델리게이트를 뿌리지만,
-	// 값을 직접 변경한 주체인 서버에서는 OnRep이 자동으로 호출되지 않음.
-	// 따라서 서버 쪽 UI와 로직도 업데이트될 수 있도록 여기서 직접 델리게이트를 브로드캐스트해 줍니다.
-	OnStageStateChanged.Broadcast(StageState);
+	// 서버 자신은 OnRep이 자동으로 안 불리므로 직접 브로드캐스트
+	OnCurrentMapChanged.Broadcast(CurrentMapId);
 }
 
-void ACrazyRooGameState::OnRep_StageState()
+void ACrazyRooGameState::OnRep_CurrentMapId()
 {
-	// 클라이언트 측에서 서버로부터 새로운 상태를 성공적으로 전달받았을 때 로그를 출력합니다.
-	FCrazyRooDebug::Print(this, FString::Printf(
-	TEXT("[CLIENT] OnRep_MatchState = %s"), CrazyRooMatchStateToString(StageState)), FColor::White);
+	FCrazyRooDebug::Print(this, FString::Printf(TEXT("[CLIENT] OnRep_CurrentMapId = %s"), *CurrentMapId.ToString()), FColor::White);
 
-	// 클라이언트의 UI 등이 이 델리게이트를 듣고 알맞은 화면으로 전환할 수 있도록 알림
-	OnStageStateChanged.Broadcast(StageState);
+	OnCurrentMapChanged.Broadcast(CurrentMapId);
 }

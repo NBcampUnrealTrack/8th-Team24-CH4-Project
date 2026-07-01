@@ -26,13 +26,6 @@ enum class ECrazyRooPlayerRole : uint8
 	P_Acrobat	UMETA(DisplayName = "Acrobat")
 };
 
-UENUM(BlueprintType)
-enum class ECrazyRooStageState : uint8
-{
-	RoleSelection  UMETA(DisplayName = "역할 선택"),   // 로비 (TestMap): 역할 선택 UI
-	InGame         UMETA(DisplayName = "게임 중")        // 게임 (TestStage): 게임 UI
-};
-
 /** 스테이지를 어딜 갈지 저장하는 구조체 (데이터 테이블 표에 사용되는 구조체입니다) */
 USTRUCT(BlueprintType)
 struct FCrazyRooStageInfo : public FTableRowBase
@@ -42,10 +35,6 @@ struct FCrazyRooStageInfo : public FTableRowBase
 	/** 읽어들일 실제 맵 (소프트 레퍼런스 - 파일 경로가 바뀌어도 안전함) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
 	TSoftObjectPtr<UWorld> Level;
-
-	/** 이 맵에 진입했을 때의 매치 상태 (UI 가 이걸 보고 화면 결정) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
-	ECrazyRooStageState MatchState = ECrazyRooStageState::RoleSelection;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSoftClassPtr<UUserWidget> StageUIClass;
@@ -83,4 +72,3 @@ struct FCrazyRooStageInfo : public FTableRowBase
 
 // 비대칭 조작 역할 Enum을 문자열 변환 (구현은 CrazyRooTypes.cpp)
 const TCHAR* CrazyRooRoleToString(ECrazyRooPlayerRole R);
-const TCHAR* CrazyRooMatchStateToString(ECrazyRooStageState S);

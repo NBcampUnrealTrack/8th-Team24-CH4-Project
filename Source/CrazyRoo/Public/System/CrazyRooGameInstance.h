@@ -47,9 +47,6 @@ public:
 	UPROPERTY()
 	FName CurrentMapId = TEXT("TestMap");//여기에 초기값을 할당해서 바로 처음 나오는 맵을 나오게 가능, NAME_None
 
-	/** 현재 맵(CurrentMapId)의 UI 위젯 클래스를 데이터 테이블에서 가져옴 (없으면 nullptr) */
-	TSubclassOf<UUserWidget> GetCurrentStageUIClass() const;
-
 protected:
 	// 플레이어의 고유 ID와 선택한 역할을 저장하는 Map
 	UPROPERTY()

@@ -10,6 +10,7 @@
 enum class ECrazyRooStageState : uint8;
 class UUserWidget;
 class ACrazyRooGameState;
+//class UWorld;
 /**
  *
  */
@@ -22,26 +23,35 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	/** GameState 를 찾아 구독 (스스로도 부르고, PlayerController 안전망도 부름) */
+	/**
+	 * 입력모드를 명시적으로 전환한다.
+	 * bShowUI = true  → 커서 보임, UI 조작 가능 (메뉴/설정창 등을 열 때)
+	 * bShowUI = false → 커서 숨김, 게임 조작 전용 (실제 플레이 중)
+	 * ESC로 설정창 열기, "게임 시작" 버튼 등 상황에 맞게 블루프린트/C++에서 자유롭게 호출.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|UI")
-	void BindToGameState();
+	void SetUIInputMode(bool bShowUI);
 
 protected:
-	/** 새 맵 액터 준비됨 → 재구독 (World 이벤트 콜백) */
+	/** 새 월드 준비됨 → GameStateSetEvent 구독 시작 + 이미 있으면 즉시 바인딩 */
 	void OnWorldReady(const UWorld::FActorsInitializedParams& Params);
 
-	/** MatchState 바뀌면 호출 → 위젯 교체 */
+	/** GameState가 실제로 세팅되는 정확한 순간 호출 (재시도 불필요한 직접 신호) */
+	void OnGameStateSet(AGameStateBase* NewGameState);
+
+	void BindToGameState(ACrazyRooGameState* GS);
+
 	UFUNCTION()
-	void HandleMatchStateChanged(ECrazyRooStageState NewState);
+	void HandleCurrentMapChanged(FName NewMapId);
 
-	/** 현재 맵의 UI 를 데이터 테이블에서 읽어 띄움 */
-	void ShowStageUI();
+	/** 지정 맵의 메인 UI를 데이터 테이블에서 읽어 띄움 (입력모드는 별도 SetUIInputMode로 관리) */
+	void ShowStageUI(FName MapId);
 
-	/** 현재 떠있는 위젯 */
 	UPROPERTY()
 	TObjectPtr<UUserWidget> CurrentWidget;
 
-	/** 구독 중인 GameState (재구독 판단) */
 	UPROPERTY()
 	TWeakObjectPtr<ACrazyRooGameState> BoundGameState;
+
+	TWeakObjectPtr<UWorld> BoundWorld;
 };

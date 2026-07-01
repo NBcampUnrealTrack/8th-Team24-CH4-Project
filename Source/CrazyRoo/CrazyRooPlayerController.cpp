@@ -11,7 +11,7 @@
 #include "CrazyRooTypes.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 #include "Components/InputComponent.h"
-#include "System/CrazyRooLocalPlayerSubsystem.h"
+
 
 void ACrazyRooPlayerController::BeginPlay()
 {
@@ -40,14 +40,6 @@ void ACrazyRooPlayerController::BeginPlay()
 		{
 
 			UE_LOG(LogCrazyRoo, Error, TEXT("Could not spawn mobile controls widget."));
-		}
-	}
-
-	if (ULocalPlayer* LP = GetLocalPlayer())
-	{
-		if (UCrazyRooLocalPlayerSubsystem* UISys = LP->GetSubsystem<UCrazyRooLocalPlayerSubsystem>())
-		{
-			UISys->BindToGameState();   // 안전망 (자가 감지가 놓쳤을 때 대비)
 		}
 	}
 
@@ -119,7 +111,7 @@ void ACrazyRooPlayerController::ServerTravel_Implementation(FName MapId)
 	// 서버에서 실행됨 → GameMode 에 트래블 위임
 	if (ACrazyRooGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ACrazyRooGameMode>() : nullptr)
 	{
-		GM->ChangeStage(MapId);
+		GM->ChangeMap(MapId);
 	}
 }
 

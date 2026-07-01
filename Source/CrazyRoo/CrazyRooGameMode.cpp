@@ -47,7 +47,6 @@ void ACrazyRooGameMode::PostLogin(APlayerController* NewPlayer)
 // 플레이어가 방을 나갔을 때 실행됨
 void ACrazyRooGameMode::Logout(AController* Exiting)
 {
-
 	// 누가 나갔는지 로그로 출력
 	const FString Msg = FString::Printf(TEXT("Logout: %s 나감"),Exiting ? *Exiting->GetName() : TEXT("null"));
 	FCrazyRooDebug::Print(this, Msg, FColor::Orange);
@@ -132,7 +131,7 @@ bool ACrazyRooGameMode::RequestRole(APlayerController* Player, ECrazyRooPlayerRo
 	return true;
 }
 
-void ACrazyRooGameMode::ChangeStage(FName MapId)
+void ACrazyRooGameMode::ChangeMap(FName MapId)
 {
 	UWorld* World = GetWorld();
 	UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>();
@@ -214,22 +213,13 @@ void ACrazyRooGameMode::ApplyMatchStateForCurrentMap()
 		return;
 	}
 
-	// CurrentMapId를 만약 None으로 되어있으면 NewState에 처음 나오는 Map에 State를 설정(방어코드)
-	ECrazyRooStageState NewState = ECrazyRooStageState::RoleSelection;//여기에 첫 시작 기본 값을 넣어도 됨
-
-	if (const FCrazyRooStageInfo* Row = GI->FindStageRow(GI->CurrentMapId))
-	{
-		NewState = Row->MatchState;
-		FCrazyRooDebug::Print(this, FString::Printf(
-			TEXT("맵 '%s' 의 MatchState = %s"),
-			*GI->CurrentMapId.ToString(), CrazyRooMatchStateToString(NewState)), FColor::Cyan);
-	}
-	else
+	// 서버는 "지금 맵이 뭔지"만 GameState에 실어 보낸다.
+	// 그 맵의 UI가 뭔지는 클라가 자기 데이터 테이블에서 직접 조회한다 (테이블은 서버·클라 둘 다 갖고 있음).
+	if (!GI->FindStageRow(GI->CurrentMapId))
 	{
 		FCrazyRooDebug::Print(this, FString::Printf(
-			TEXT("맵 '%s' 행 못찾음 → 기본 초기값"),
-			*GI->CurrentMapId.ToString()), FColor::Orange);
+			TEXT("맵 '%s' 행 못찾음"), *GI->CurrentMapId.ToString()), FColor::Orange);
 	}
 
-	GS->SetStageState(NewState);
+	GS->SetCurrentMapId(GI->CurrentMapId);
 }

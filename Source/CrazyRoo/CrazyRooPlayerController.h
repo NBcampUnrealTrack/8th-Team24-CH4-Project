@@ -68,8 +68,6 @@ public:
 	//void Key_TravelToStage();
 	//
 
-
-
 protected:
 
 	// [Client] 서버가 이미 선택된 역할이라고 거부하는 함수입니다.

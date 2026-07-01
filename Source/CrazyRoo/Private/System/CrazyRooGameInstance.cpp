@@ -87,14 +87,3 @@ const FCrazyRooStageInfo* UCrazyRooGameInstance::FindStageRow(FName MapId) const
 	return MapDataTable->FindRow<FCrazyRooStageInfo>(MapId, TEXT("FindStageRow"));
 }
 
-TSubclassOf<UUserWidget> UCrazyRooGameInstance::GetCurrentStageUIClass() const
-{
-	const FCrazyRooStageInfo* Row = FindStageRow(CurrentMapId);
-	if (!Row || Row->StageUIClass.IsNull())
-	{
-		return nullptr;
-	}
-	// Soft 참조 → 실제 로드 (동기 로드; 위젯은 가벼워서 OK)
-	return Row->StageUIClass.LoadSynchronous();
-}
-
