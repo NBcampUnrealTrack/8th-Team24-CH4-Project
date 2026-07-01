@@ -34,11 +34,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle Spawn", meta = (ClampMin = "0.0", Units = "cm"))
 	float LaneSpacing = 300.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle Spawn", meta = (ClampMin = "0.01", Units = "s"))
-	float SpawnInterval = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle Spawn", meta = (ClampMin = "0", ClampMax = "3"))
+	int32 MaxAllLaneObstacleCount = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle Spawn", meta = (ClampMin = "0", ClampMax = "2"))
+	int32 MaxSingleLaneObstacleCount = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle Spawn")
-	bool bAutoStart = false;
+	bool bGenerateOnBeginPlay = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle Spawn")
+	bool bAllowRegenerate = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Obstacle Spawn")
+	bool bHasGenerated = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle Spawn")
 	bool bUseRandomSeed = false;
@@ -47,7 +56,7 @@ protected:
 	int32 RandomSeed = 12345;
 
 	FRandomStream RandomStream;
-	FTimerHandle SpawnTimerHandle;
+	TArray<TWeakObjectPtr<ARunnerObstacle>> GeneratedObstacles;
 
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Obstacle Spawn|Events")
@@ -62,6 +71,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Obstacle Spawn")
 	ARunnerObstacle* SpawnOnce();
 
+	UFUNCTION(BlueprintCallable, Category = "Obstacle Spawn")
+	int32 GenerateObstaclesOnce();
+
+	UFUNCTION(BlueprintCallable, Category = "Obstacle Spawn")
+	void ResetGeneratedObstacles(bool bDestroyExisting = false);
+
 	UFUNCTION(BlueprintPure, Category = "Obstacle Spawn")
 	bool HasValidSpawnGroup() const;
 
@@ -70,10 +85,14 @@ protected:
 	virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
 
 	const FRunnerObstacleSpawnGroup* ChooseSpawnGroup();
+	const FRunnerObstacleSpawnGroup* ChooseSpawnGroupByCoverage(ERunnerLaneCoverage DesiredCoverage);
+	bool ChooseGenerationCoverage(ERunnerLaneCoverage& OutCoverage);
+	float GetTotalWeightByCoverage(ERunnerLaneCoverage DesiredCoverage) const;
 	TSubclassOf<ARunnerObstacle> ChooseObstacleClass(const FRunnerObstacleSpawnGroup& Group);
 	ERunnerLane ChooseLane(ERunnerLaneCoverage LaneCoverage);
+	bool ChooseUnusedSingleLane(TArray<ERunnerLane>& AvailableLanes, ERunnerLane& OutLane);
 	FVector GetSpawnLocation(ERunnerLane Lane);
-	void SpawnTimerElapsed();
+	ARunnerObstacle* SpawnObstacleFromGroup(const FRunnerObstacleSpawnGroup& Group, ERunnerLane SpawnLane);
 	float GetRandomRange(float Min, float Max);
 	int32 GetRandomIndex(int32 Num);
 };

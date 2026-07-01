@@ -48,6 +48,13 @@ enum class ERunnerTurnInputDirection : uint8
 };
 
 UENUM(BlueprintType)
+enum class ERunnerTurnJudgeMode : uint8
+{
+	ForcedTurn UMETA(DisplayName = "Forced Turn"),
+	BranchTurn UMETA(DisplayName = "Branch Turn")
+};
+
+UENUM(BlueprintType)
 enum class EFlyingEnemySpawnSide : uint8
 {
 	RandomSide UMETA(DisplayName = "Random Side"),

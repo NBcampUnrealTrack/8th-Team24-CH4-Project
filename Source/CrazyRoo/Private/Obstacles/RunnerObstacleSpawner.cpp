@@ -6,7 +6,6 @@
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "Obstacles/RunnerObstacle.h"
-#include "TimerManager.h"
 
 ARunnerObstacleSpawner::ARunnerObstacleSpawner()
 {
@@ -27,34 +26,24 @@ void ARunnerObstacleSpawner::BeginPlay()
 
 	RandomStream.Initialize(bUseRandomSeed ? RandomSeed : FMath::Rand());
 
-	if (bAutoStart)
+	if (bGenerateOnBeginPlay)
 	{
-		StartSpawning();
+		GenerateObstaclesOnce();
 	}
 }
 
 void ARunnerObstacleSpawner::EndPlay(EEndPlayReason::Type EndPlayReason)
 {
-	StopSpawning();
 	Super::EndPlay(EndPlayReason);
 }
 
 void ARunnerObstacleSpawner::StartSpawning()
 {
-	if (!GetWorld())
-	{
-		return;
-	}
-
-	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &ARunnerObstacleSpawner::SpawnTimerElapsed, SpawnInterval, true);
+	GenerateObstaclesOnce();
 }
 
 void ARunnerObstacleSpawner::StopSpawning()
 {
-	if (GetWorld())
-	{
-		GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
-	}
 }
 
 ARunnerObstacle* ARunnerObstacleSpawner::SpawnOnce()
@@ -86,6 +75,85 @@ ARunnerObstacle* ARunnerObstacleSpawner::SpawnOnce()
 	}
 
 	return SpawnedObstacle;
+}
+
+int32 ARunnerObstacleSpawner::GenerateObstaclesOnce()
+{
+	if (bHasGenerated)
+	{
+		if (!bAllowRegenerate)
+		{
+			return 0;
+		}
+
+		ResetGeneratedObstacles(true);
+	}
+
+	int32 GeneratedCount = 0;
+	TArray<ERunnerLane> AvailableSingleLanes = { ERunnerLane::Left, ERunnerLane::Center, ERunnerLane::Right };
+	ERunnerLaneCoverage SelectedCoverage = ERunnerLaneCoverage::SingleLane;
+
+	if (!ChooseGenerationCoverage(SelectedCoverage))
+	{
+		return 0;
+	}
+
+	if (SelectedCoverage == ERunnerLaneCoverage::AllLanes)
+	{
+		const int32 AllLaneCount = FMath::Clamp(MaxAllLaneObstacleCount, 0, 1);
+		for (int32 Index = 0; Index < AllLaneCount; ++Index)
+		{
+			if (const FRunnerObstacleSpawnGroup* Group = ChooseSpawnGroupByCoverage(ERunnerLaneCoverage::AllLanes))
+			{
+				if (ARunnerObstacle* Obstacle = SpawnObstacleFromGroup(*Group, ERunnerLane::All))
+				{
+					GeneratedObstacles.Add(Obstacle);
+					++GeneratedCount;
+				}
+			}
+		}
+	}
+	else
+	{
+		const int32 SingleLaneCount = FMath::Clamp(MaxSingleLaneObstacleCount, 0, 2);
+		for (int32 Index = 0; Index < SingleLaneCount; ++Index)
+		{
+			ERunnerLane SpawnLane = ERunnerLane::Center;
+			if (!ChooseUnusedSingleLane(AvailableSingleLanes, SpawnLane))
+			{
+				break;
+			}
+
+			if (const FRunnerObstacleSpawnGroup* Group = ChooseSpawnGroupByCoverage(ERunnerLaneCoverage::SingleLane))
+			{
+				if (ARunnerObstacle* Obstacle = SpawnObstacleFromGroup(*Group, SpawnLane))
+				{
+					GeneratedObstacles.Add(Obstacle);
+					++GeneratedCount;
+				}
+			}
+		}
+	}
+
+	bHasGenerated = true;
+	return GeneratedCount;
+}
+
+void ARunnerObstacleSpawner::ResetGeneratedObstacles(bool bDestroyExisting)
+{
+	if (bDestroyExisting)
+	{
+		for (const TWeakObjectPtr<ARunnerObstacle>& Obstacle : GeneratedObstacles)
+		{
+			if (Obstacle.IsValid())
+			{
+				Obstacle->Destroy();
+			}
+		}
+	}
+
+	GeneratedObstacles.Reset();
+	bHasGenerated = false;
 }
 
 bool ARunnerObstacleSpawner::HasValidSpawnGroup() const
@@ -135,6 +203,81 @@ const FRunnerObstacleSpawnGroup* ARunnerObstacleSpawner::ChooseSpawnGroup()
 	return nullptr;
 }
 
+const FRunnerObstacleSpawnGroup* ARunnerObstacleSpawner::ChooseSpawnGroupByCoverage(ERunnerLaneCoverage DesiredCoverage)
+{
+	float TotalWeight = 0.0f;
+	for (const FRunnerObstacleSpawnGroup& Group : SpawnGroups)
+	{
+		if (Group.LaneCoverage == DesiredCoverage && Group.Weight > 0.0f && !Group.ObstacleClasses.IsEmpty())
+		{
+			TotalWeight += Group.Weight;
+		}
+	}
+
+	if (TotalWeight <= 0.0f)
+	{
+		return nullptr;
+	}
+
+	float Pick = GetRandomRange(0.0f, TotalWeight);
+	for (const FRunnerObstacleSpawnGroup& Group : SpawnGroups)
+	{
+		if (Group.LaneCoverage != DesiredCoverage || Group.Weight <= 0.0f || Group.ObstacleClasses.IsEmpty())
+		{
+			continue;
+		}
+
+		Pick -= Group.Weight;
+		if (Pick <= 0.0f)
+		{
+			return &Group;
+		}
+	}
+
+	return nullptr;
+}
+
+bool ARunnerObstacleSpawner::ChooseGenerationCoverage(ERunnerLaneCoverage& OutCoverage)
+{
+	const float AllLaneWeight = MaxAllLaneObstacleCount > 0 ? GetTotalWeightByCoverage(ERunnerLaneCoverage::AllLanes) : 0.0f;
+	const float SingleLaneWeight = MaxSingleLaneObstacleCount > 0 ? GetTotalWeightByCoverage(ERunnerLaneCoverage::SingleLane) : 0.0f;
+	const float TotalWeight = AllLaneWeight + SingleLaneWeight;
+
+	if (TotalWeight <= 0.0f)
+	{
+		return false;
+	}
+
+	if (AllLaneWeight <= 0.0f)
+	{
+		OutCoverage = ERunnerLaneCoverage::SingleLane;
+		return true;
+	}
+
+	if (SingleLaneWeight <= 0.0f)
+	{
+		OutCoverage = ERunnerLaneCoverage::AllLanes;
+		return true;
+	}
+
+	OutCoverage = GetRandomRange(0.0f, TotalWeight) <= AllLaneWeight ? ERunnerLaneCoverage::AllLanes : ERunnerLaneCoverage::SingleLane;
+	return true;
+}
+
+float ARunnerObstacleSpawner::GetTotalWeightByCoverage(ERunnerLaneCoverage DesiredCoverage) const
+{
+	float TotalWeight = 0.0f;
+	for (const FRunnerObstacleSpawnGroup& Group : SpawnGroups)
+	{
+		if (Group.LaneCoverage == DesiredCoverage && Group.Weight > 0.0f && !Group.ObstacleClasses.IsEmpty())
+		{
+			TotalWeight += Group.Weight;
+		}
+	}
+
+	return TotalWeight;
+}
+
 TSubclassOf<ARunnerObstacle> ARunnerObstacleSpawner::ChooseObstacleClass(const FRunnerObstacleSpawnGroup& Group)
 {
 	if (Group.ObstacleClasses.IsEmpty())
@@ -163,6 +306,19 @@ ERunnerLane ARunnerObstacleSpawner::ChooseLane(ERunnerLaneCoverage LaneCoverage)
 	}
 }
 
+bool ARunnerObstacleSpawner::ChooseUnusedSingleLane(TArray<ERunnerLane>& AvailableLanes, ERunnerLane& OutLane)
+{
+	if (AvailableLanes.IsEmpty())
+	{
+		return false;
+	}
+
+	const int32 LaneIndex = GetRandomIndex(AvailableLanes.Num());
+	OutLane = AvailableLanes[LaneIndex];
+	AvailableLanes.RemoveAt(LaneIndex);
+	return true;
+}
+
 FVector ARunnerObstacleSpawner::GetSpawnLocation(ERunnerLane Lane)
 {
 	float LaneOffset = 0.0f;
@@ -180,9 +336,28 @@ FVector ARunnerObstacleSpawner::GetSpawnLocation(ERunnerLane Lane)
 	return SpawnArea->GetComponentTransform().TransformPosition(LocalOffset);
 }
 
-void ARunnerObstacleSpawner::SpawnTimerElapsed()
+ARunnerObstacle* ARunnerObstacleSpawner::SpawnObstacleFromGroup(const FRunnerObstacleSpawnGroup& Group, ERunnerLane SpawnLane)
 {
-	SpawnOnce();
+	const TSubclassOf<ARunnerObstacle> ObstacleClass = ChooseObstacleClass(Group);
+	if (!ObstacleClass || !GetWorld())
+	{
+		return nullptr;
+	}
+
+	const FVector SpawnLocation = GetSpawnLocation(SpawnLane);
+	const FRotator SpawnRotation = GetActorRotation();
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+
+	ARunnerObstacle* SpawnedObstacle = GetWorld()->SpawnActor<ARunnerObstacle>(ObstacleClass, SpawnLocation, SpawnRotation, SpawnParams);
+	if (SpawnedObstacle)
+	{
+		SpawnedObstacle->InitializeObstacle(Group.ActionType, Group.LaneCoverage, SpawnLane);
+		OnObstacleSpawned.Broadcast(this, SpawnedObstacle);
+	}
+
+	return SpawnedObstacle;
 }
 
 float ARunnerObstacleSpawner::GetRandomRange(float Min, float Max)

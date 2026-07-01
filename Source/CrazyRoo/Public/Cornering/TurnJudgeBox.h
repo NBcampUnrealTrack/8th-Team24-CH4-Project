@@ -32,6 +32,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turn Judge")
 	ERunnerTurnDirection CornerDirection = ERunnerTurnDirection::LeftTurn;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turn Judge")
+	ERunnerTurnJudgeMode TurnJudgeMode = ERunnerTurnJudgeMode::ForcedTurn;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turn Judge", meta = (ClampMin = "0.0", Units = "s"))
 	float MaxValidTime = 0.0f;
 
@@ -64,6 +67,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Turn Judge")
 	float GetRecommendedYawDelta() const;
+
+	UFUNCTION(BlueprintPure, Category = "Turn Judge")
+	float GetRecommendedYawDeltaForInput(ERunnerTurnInputDirection InputDirection) const;
 
 	UFUNCTION(BlueprintPure, Category = "Turn Judge")
 	FRotator GetRecommendedYawRotation() const;

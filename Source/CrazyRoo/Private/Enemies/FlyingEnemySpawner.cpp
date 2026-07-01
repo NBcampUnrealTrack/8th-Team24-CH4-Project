@@ -6,6 +6,8 @@
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "Enemies/FlyingEnemy.h"
+#include "GameFramework/Pawn.h"
+#include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 
 AFlyingEnemySpawner::AFlyingEnemySpawner()
@@ -77,6 +79,11 @@ AFlyingEnemy* AFlyingEnemySpawner::SpawnOnce()
 		return nullptr;
 	}
 
+	if (!ResolveSpawnReference())
+	{
+		return nullptr;
+	}
+
 	const FTransform ReferenceTransform = GetReferenceTransform();
 	EFlyingEnemySlot AssignedSlot = EFlyingEnemySlot::Center;
 	if (!ChooseAvailableSlot(AssignedSlot))
@@ -86,11 +93,12 @@ AFlyingEnemy* AFlyingEnemySpawner::SpawnOnce()
 
 	const FVector SlotLocalOffset = GetSlotLocalOffset(AssignedSlot);
 	const FVector SpawnLocation = GetSpawnLocation(ReferenceTransform, AssignedSlot);
+	const FRotator SpawnRotation = GetLookAtReferenceRotation(SpawnLocation, ReferenceTransform);
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 
-	AFlyingEnemy* SpawnedEnemy = GetWorld()->SpawnActor<AFlyingEnemy>(EnemyClass, SpawnLocation, ReferenceTransform.Rotator(), SpawnParams);
+	AFlyingEnemy* SpawnedEnemy = GetWorld()->SpawnActor<AFlyingEnemy>(EnemyClass, SpawnLocation, SpawnRotation, SpawnParams);
 	if (SpawnedEnemy)
 	{
 		SpawnedEnemy->ConfigureSlotMovement(SpawnReferenceComponent, SpawnReferenceActor, AssignedSlot, SlotLocalOffset, DescendSpeed, SlotArrivalTolerance, AttackDelayAfterArrive, AttackDamage, GetAttackTarget(), bSpawnedEnemiesFollowReference);
@@ -216,7 +224,44 @@ FTransform AFlyingEnemySpawner::GetReferenceTransform() const
 		return SpawnReferenceActor->GetActorTransform();
 	}
 
-	return GetActorTransform();
+	return FTransform::Identity;
+}
+
+bool AFlyingEnemySpawner::ResolveSpawnReference()
+{
+	if (IsValid(SpawnReferenceComponent))
+	{
+		if (!IsValid(SpawnReferenceActor))
+		{
+			SpawnReferenceActor = SpawnReferenceComponent->GetOwner();
+		}
+		return true;
+	}
+
+	if (IsValid(SpawnReferenceActor))
+	{
+		return true;
+	}
+
+	if (APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(this, 0))
+	{
+		SpawnReferenceActor = PlayerPawn;
+		return true;
+	}
+
+	TArray<AActor*> PlayerTaggedActors;
+	UGameplayStatics::GetAllActorsWithTag(this, TEXT("Player"), PlayerTaggedActors);
+	for (AActor* TaggedActor : PlayerTaggedActors)
+	{
+		if (IsValid(TaggedActor))
+		{
+			SpawnReferenceActor = TaggedActor;
+			return true;
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("FlyingEnemySpawner '%s' could not find a SpawnReferenceActor. Flying enemy spawn was skipped."), *GetName());
+	return false;
 }
 
 FVector AFlyingEnemySpawner::GetSlotLocalOffset(EFlyingEnemySlot Slot) const
@@ -238,6 +283,20 @@ FVector AFlyingEnemySpawner::GetSpawnLocation(const FTransform& ReferenceTransfo
 {
 	const FVector SlotWorldLocation = ReferenceTransform.TransformPosition(GetSlotLocalOffset(Slot));
 	return SlotWorldLocation + ReferenceTransform.GetRotation().GetUpVector() * SpawnAboveOffset;
+}
+
+FRotator AFlyingEnemySpawner::GetLookAtReferenceRotation(const FVector& SpawnLocation, const FTransform& ReferenceTransform) const
+{
+	const FVector DirectionToReference = ReferenceTransform.GetLocation() - SpawnLocation;
+	if (DirectionToReference.IsNearlyZero())
+	{
+		return GetActorRotation();
+	}
+
+	FRotator LookAtRotation = DirectionToReference.Rotation();
+	LookAtRotation.Pitch = 0.0f;
+	LookAtRotation.Roll = 0.0f;
+	return LookAtRotation;
 }
 
 AActor* AFlyingEnemySpawner::GetAttackTarget() const

@@ -124,8 +124,10 @@ protected:
 	bool ChooseAvailableSlot(EFlyingEnemySlot& OutSlot);
 	bool IsSlotOccupied(EFlyingEnemySlot Slot) const;
 	FTransform GetReferenceTransform() const;
+	bool ResolveSpawnReference();
 	FVector GetSlotLocalOffset(EFlyingEnemySlot Slot) const;
 	FVector GetSpawnLocation(const FTransform& ReferenceTransform, EFlyingEnemySlot Slot) const;
+	FRotator GetLookAtReferenceRotation(const FVector& SpawnLocation, const FTransform& ReferenceTransform) const;
 	AActor* GetAttackTarget() const;
 	void RegisterSpawnedEnemy(AFlyingEnemy* Enemy);
 	void CleanActiveEnemies();

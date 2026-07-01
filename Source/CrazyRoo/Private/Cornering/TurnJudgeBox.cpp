@@ -66,6 +66,11 @@ bool ATurnJudgeBox::IsPlayerInJudgeBox(AActor* PlayerActor) const
 
 bool ATurnJudgeBox::IsInputValidForCorner(ERunnerTurnInputDirection InputDirection) const
 {
+	if (TurnJudgeMode == ERunnerTurnJudgeMode::BranchTurn)
+	{
+		return InputDirection == ERunnerTurnInputDirection::LeftInput || InputDirection == ERunnerTurnInputDirection::RightInput;
+	}
+
 	return (CornerDirection == ERunnerTurnDirection::LeftTurn && InputDirection == ERunnerTurnInputDirection::LeftInput)
 		|| (CornerDirection == ERunnerTurnDirection::RightTurn && InputDirection == ERunnerTurnInputDirection::RightInput);
 }
@@ -73,6 +78,11 @@ bool ATurnJudgeBox::IsInputValidForCorner(ERunnerTurnInputDirection InputDirecti
 float ATurnJudgeBox::GetRecommendedYawDelta() const
 {
 	return CornerDirection == ERunnerTurnDirection::LeftTurn ? -90.0f : 90.0f;
+}
+
+float ATurnJudgeBox::GetRecommendedYawDeltaForInput(ERunnerTurnInputDirection InputDirection) const
+{
+	return InputDirection == ERunnerTurnInputDirection::LeftInput ? -90.0f : 90.0f;
 }
 
 FRotator ATurnJudgeBox::GetRecommendedYawRotation() const

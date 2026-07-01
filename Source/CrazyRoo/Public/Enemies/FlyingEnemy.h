@@ -92,7 +92,7 @@ protected:
 	bool bBlockVisibilityChannel = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Lifetime")
-	bool bAutoDestroyAfterLifetime = true;
+	bool bAutoDestroyAfterLifetime = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Lifetime", meta = (ClampMin = "0.0", Units = "s", EditCondition = "bAutoDestroyAfterLifetime"))
 	float Lifetime = 8.0f;
@@ -103,8 +103,13 @@ protected:
 	TWeakObjectPtr<AActor> SlotReferenceActor;
 	TWeakObjectPtr<USceneComponent> SlotReferenceComponent;
 	FVector SlotLocalOffset = FVector::ZeroVector;
+	FVector InitialReferenceLocation = FVector::ZeroVector;
+	FVector InitialReferenceForward = FVector::ForwardVector;
+	FVector InitialSlotWorldLocation = FVector::ZeroVector;
 	bool bUseSlotMovement = false;
 	bool bDestroyEventBroadcasted = false;
+	bool bAttackTimerStarted = false;
+	bool bHasInitialSlotTracking = false;
 
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Enemy|Events")
@@ -173,5 +178,8 @@ protected:
 	void RefreshCollisionResponses();
 	void StartAttackDelay();
 	FVector GetCurrentSlotWorldLocation() const;
+	FVector GetReferenceLocation() const;
+	bool GetReferenceTransform(FTransform& OutTransform) const;
+	void UpdateLookAtReference();
 	FVector ResolveMoveDirection() const;
 };

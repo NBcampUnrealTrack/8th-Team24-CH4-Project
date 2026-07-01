@@ -82,11 +82,16 @@ void AFlyingEnemy::Tick(float DeltaSeconds)
 			const FVector NextLocation = FMath::VInterpConstantTo(GetActorLocation(), TargetLocation, DeltaSeconds, DescendSpeed);
 			SetActorLocation(NextLocation, true);
 
-			if (FVector::DistSquared(GetActorLocation(), TargetLocation) <= FMath::Square(SlotArrivalTolerance))
+			const float DistanceToSlot = FVector::Dist(GetActorLocation(), TargetLocation);
+			if (!bAttackTimerStarted && DistanceToSlot <= SlotArrivalTolerance)
+			{
+				StartAttackDelay();
+			}
+
+			if (DistanceToSlot <= 1.0f)
 			{
 				SetActorLocation(TargetLocation, false);
 				bHasArrivedAtSlot = true;
-				StartAttackDelay();
 			}
 		}
 		else if (bFollowReferenceActor)
@@ -94,6 +99,7 @@ void AFlyingEnemy::Tick(float DeltaSeconds)
 			SetActorLocation(TargetLocation, false);
 		}
 
+		UpdateLookAtReference();
 		return;
 	}
 
@@ -123,10 +129,30 @@ void AFlyingEnemy::ConfigureSlotMovement(USceneComponent* InReferenceComponent, 
 	AttackDamage = FMath::Max(0.0f, InAttackDamage);
 	AttackTargetActor = InAttackTargetActor;
 	bFollowReferenceActor = bInFollowReferenceActor;
+	FTransform ReferenceTransform;
+	bHasInitialSlotTracking = GetReferenceTransform(ReferenceTransform);
+	if (bHasInitialSlotTracking)
+	{
+		InitialReferenceLocation = ReferenceTransform.GetLocation();
+		InitialReferenceForward = ReferenceTransform.GetRotation().GetForwardVector().GetSafeNormal();
+		if (InitialReferenceForward.IsNearlyZero())
+		{
+			InitialReferenceForward = FVector::ForwardVector;
+		}
+		InitialSlotWorldLocation = ReferenceTransform.TransformPosition(SlotLocalOffset);
+	}
+	else
+	{
+		InitialReferenceLocation = GetActorLocation();
+		InitialReferenceForward = GetActorForwardVector().GetSafeNormal();
+		InitialSlotWorldLocation = GetActorLocation();
+	}
 	bHasArrivedAtSlot = false;
 	bUseSlotMovement = true;
 	bMovementEnabled = true;
 	bCanAttack = true;
+	bAttackTimerStarted = false;
+	UpdateLookAtReference();
 }
 
 void AFlyingEnemy::SetMovementTarget(AActor* InTargetActor)
@@ -153,6 +179,7 @@ void AFlyingEnemy::DisableEnemyInteraction()
 	bCanAttack = false;
 	bMovementEnabled = false;
 	GetWorldTimerManager().ClearTimer(AttackTimerHandle);
+	bAttackTimerStarted = false;
 
 	if (HitBox)
 	{
@@ -168,6 +195,7 @@ void AFlyingEnemy::StopFollowingReference()
 	TargetActor = nullptr;
 	SlotReferenceActor = nullptr;
 	SlotReferenceComponent = nullptr;
+	bHasInitialSlotTracking = false;
 }
 
 void AFlyingEnemy::ScheduleDestroy(float Delay)
@@ -235,6 +263,8 @@ void AFlyingEnemy::ApplyDamage(float Damage, AActor* DamageCauser, const FVector
 
 void AFlyingEnemy::HandleDeath()
 {
+	GetWorldTimerManager().ClearTimer(AttackTimerHandle);
+	bAttackTimerStarted = false;
 	BroadcastDestroyedEvent();
 	Destroy();
 }
@@ -267,7 +297,7 @@ void AFlyingEnemy::DestroyByLifetime()
 
 void AFlyingEnemy::TriggerAttackHitPlayer()
 {
-	if (!bCanAttack)
+	if (!bCanAttack || CurrentHP <= 0.0f)
 	{
 		return;
 	}
@@ -278,7 +308,6 @@ void AFlyingEnemy::TriggerAttackHitPlayer()
 		return;
 	}
 
-	bCanAttack = false;
 	OnFlyingEnemyAttackHitPlayer.Broadcast(this, TargetPlayer, AttackDamage);
 }
 
@@ -314,30 +343,68 @@ void AFlyingEnemy::StartAttackDelay()
 		return;
 	}
 
-	GetWorldTimerManager().ClearTimer(AttackTimerHandle);
-
-	if (AttackDelayAfterArrive <= 0.0f)
+	if (GetWorldTimerManager().IsTimerActive(AttackTimerHandle))
 	{
-		TriggerAttackHitPlayer();
 		return;
 	}
 
-	GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &AFlyingEnemy::TriggerAttackHitPlayer, AttackDelayAfterArrive, false);
+	bAttackTimerStarted = true;
+	const float SafeAttackInterval = FMath::Max(0.1f, AttackDelayAfterArrive);
+	GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &AFlyingEnemy::TriggerAttackHitPlayer, SafeAttackInterval, true);
 }
 
 FVector AFlyingEnemy::GetCurrentSlotWorldLocation() const
 {
+	if (!bHasInitialSlotTracking)
+	{
+		return GetActorLocation();
+	}
+
+	const FVector ReferenceDelta = GetReferenceLocation() - InitialReferenceLocation;
+	const float ForwardMovementDelta = FVector::DotProduct(ReferenceDelta, InitialReferenceForward);
+	return InitialSlotWorldLocation + InitialReferenceForward * ForwardMovementDelta;
+}
+
+FVector AFlyingEnemy::GetReferenceLocation() const
+{
+	FTransform ReferenceTransform;
+	if (GetReferenceTransform(ReferenceTransform))
+	{
+		return ReferenceTransform.GetLocation();
+	}
+
+	return GetActorLocation();
+}
+
+bool AFlyingEnemy::GetReferenceTransform(FTransform& OutTransform) const
+{
 	if (SlotReferenceComponent.IsValid())
 	{
-		return SlotReferenceComponent->GetComponentTransform().TransformPosition(SlotLocalOffset);
+		OutTransform = SlotReferenceComponent->GetComponentTransform();
+		return true;
 	}
 
 	if (SlotReferenceActor.IsValid())
 	{
-		return SlotReferenceActor->GetActorTransform().TransformPosition(SlotLocalOffset);
+		OutTransform = SlotReferenceActor->GetActorTransform();
+		return true;
 	}
 
-	return GetActorLocation();
+	return false;
+}
+
+void AFlyingEnemy::UpdateLookAtReference()
+{
+	const FVector DirectionToReference = GetReferenceLocation() - GetActorLocation();
+	if (DirectionToReference.IsNearlyZero())
+	{
+		return;
+	}
+
+	FRotator LookAtRotation = DirectionToReference.Rotation();
+	LookAtRotation.Pitch = 0.0f;
+	LookAtRotation.Roll = 0.0f;
+	SetActorRotation(LookAtRotation);
 }
 
 FVector AFlyingEnemy::ResolveMoveDirection() const
