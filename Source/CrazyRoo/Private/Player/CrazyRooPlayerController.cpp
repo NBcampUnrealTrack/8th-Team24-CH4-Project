@@ -1,20 +1,20 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 
-#include "CrazyRooPlayerController.h"
+#include "Player/CrazyRooPlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
 #include "CrazyRoo.h"
-#include "CrazyRooGameMode.h"
+#include "System/CrazyRooGameMode.h"
 #include "Player/CrazyRooPlayerState.h"
-#include "CrazyRooTypes.h"
+#include "Types/CrazyRooTypes.h"
 #include "Widgets/Input/SVirtualJoystick.h"
-#include "LHG/Manager/SharedCharacterManager.h"
-#include "LHG/Character/SharedRailCharacter.h"
-#include "LHG/Input/RailInputConfig.h"
+#include "Manager/SharedCharacterManager.h"
+#include "Player/SharedRailCharacter.h"
+#include "Input/RailInputConfig.h"
 #include "Components/InputComponent.h"
 #include "Kismet/GameplayStatics.h"
 

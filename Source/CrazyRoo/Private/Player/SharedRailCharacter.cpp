@@ -1,6 +1,6 @@
 // SharedRailCharacter.cpp
 
-#include "LHG/Character/SharedRailCharacter.h"
+#include "Player/SharedRailCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"

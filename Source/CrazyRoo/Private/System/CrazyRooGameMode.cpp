@@ -1,14 +1,14 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "CrazyRooGameMode.h"
-#include "CrazyRooTypes.h"
+#include "System/CrazyRooGameMode.h"
+#include "Types/CrazyRooTypes.h"
 #include "CrazyRoo.h"
 #include "System/CrazyRooGameState.h"
 #include "Player/CrazyRooPlayerState.h"
-#include "CrazyRooPlayerController.h"
+#include "Player/CrazyRooPlayerController.h"
 #include "GameFramework/PlayerController.h"
 #include "System/CrazyRooGameInstance.h"
-#include "LHG/Manager/SharedCharacterManager.h"//파일경로 변경 가능할 수도
+#include "Manager/SharedCharacterManager.h"
 
 ACrazyRooGameMode::ACrazyRooGameMode()
 {

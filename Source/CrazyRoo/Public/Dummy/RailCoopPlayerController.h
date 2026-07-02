@@ -5,7 +5,7 @@
 //
 // #include "CoreMinimal.h"
 // #include "GameFramework/PlayerController.h"
-// #include "LHG/Types/RailTypes.h"
+// #include "Dummy/RailTypes.h"
 // #include "RailCoopPlayerController.generated.h"
 //
 // class UInputMappingContext;

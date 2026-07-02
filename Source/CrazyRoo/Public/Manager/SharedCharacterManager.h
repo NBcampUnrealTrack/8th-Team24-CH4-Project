@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-//#include "LHG/Types/RailTypes.h"
+//#include "Dummy/RailTypes.h"
 #include "SharedCharacterManager.generated.h"
 
 class ASharedRailCharacter;

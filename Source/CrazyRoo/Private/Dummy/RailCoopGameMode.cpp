@@ -1,10 +1,10 @@
 // // RailCoopGameMode.cpp
 //
-// #include "LHG/GameMode/RailCoopGameMode.h"
+// #include "Dummy/RailCoopGameMode.h"
 //
-// #include "LHG/Manager/SharedCharacterManager.h"
-// #include "LHG/Character/SharedRailCharacter.h"
-// #include "LHG/Controller/RailCoopPlayerController.h"
+// #include "Manager/SharedCharacterManager.h"
+// #include "Player/SharedRailCharacter.h"
+// #include "Dummy/RailCoopPlayerController.h"
 // #include "Kismet/GameplayStatics.h"
 // #include "Engine/World.h"
 //

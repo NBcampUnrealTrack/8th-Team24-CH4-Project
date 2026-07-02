@@ -1,9 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "System/CrazyRooLocalPlayerSubsystem.h"
+#include "Manager/CrazyRooLocalPlayerSubsystem.h"
 #include "CrazyRoo.h"
-#include "CrazyRooTypes.h"
+#include "Types/CrazyRooTypes.h"
 #include "System/CrazyRooGameState.h"
 #include "System/CrazyRooGameInstance.h"
 #include "Engine/LocalPlayer.h"

@@ -1,10 +1,10 @@
 // SharedCharacterManager.cpp
 
-#include "LHG/Manager/SharedCharacterManager.h"
-#include "LHG/Character/SharedRailCharacter.h"
+#include "Manager/SharedCharacterManager.h"
+#include "Player/SharedRailCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
-#include "CrazyRooTypes.h"
+#include "Types/CrazyRooTypes.h"
 #include "CrazyRoo.h"
 
 ASharedCharacterManager::ASharedCharacterManager()

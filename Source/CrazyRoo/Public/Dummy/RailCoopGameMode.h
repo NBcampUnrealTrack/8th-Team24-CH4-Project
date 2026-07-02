@@ -3,7 +3,7 @@
 // #pragma once
 //
 // #include "CoreMinimal.h"
-// #include "LHG/Types/RailTypes.h"
+// #include "Dummy/RailTypes.h"
 // #include "GameFramework/GameModeBase.h"
 // #include "RailCoopGameMode.generated.h"
 //

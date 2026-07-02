@@ -1,7 +1,7 @@
 // CrazyRoo - System Framework & Multiplayer
 // CrazyRooTypes.h 에 선언된 헬퍼 함수 구현부.
 
-#include "CrazyRooTypes.h"
+#include "Types/CrazyRooTypes.h"
 
 // 비대칭 조작 역할 Enum을 문자열 변환
 const TCHAR* CrazyRooRoleToString(ECrazyRooPlayerRole R)

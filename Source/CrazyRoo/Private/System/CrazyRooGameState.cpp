@@ -3,7 +3,7 @@
 
 #include "System/CrazyRooGameState.h"
 #include "CrazyRoo.h"
-#include "CrazyRooTypes.h"
+#include "Types/CrazyRooTypes.h"
 #include "Net/UnrealNetwork.h"
 
 ACrazyRooGameState::ACrazyRooGameState()

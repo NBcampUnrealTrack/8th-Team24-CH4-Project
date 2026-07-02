@@ -1,6 +1,6 @@
 // CrazyRoo 게임 인스턴스 클래스
 #include "System/CrazyRooGameInstance.h"
-#include "CrazyRooTypes.h"
+#include "Types/CrazyRooTypes.h"
 #include "CrazyRoo.h"
 #include "Blueprint/UserWidget.h"
 

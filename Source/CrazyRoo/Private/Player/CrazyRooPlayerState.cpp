@@ -1,7 +1,7 @@
 // CrazyRoo 플레이어 스테이트 클래스
 #include "Player/CrazyRooPlayerState.h"
 #include "CrazyRoo.h"
-#include "CrazyRooTypes.h"
+#include "Types/CrazyRooTypes.h"
 #include "Net/UnrealNetwork.h"
 
 ACrazyRooPlayerState::ACrazyRooPlayerState()
