@@ -4,13 +4,19 @@
 #include "CrazyRooPlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
+#include "EnhancedInputComponent.h"
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
 #include "CrazyRoo.h"
 #include "CrazyRooGameMode.h"
+#include "Player/CrazyRooPlayerState.h"
 #include "CrazyRooTypes.h"
 #include "Widgets/Input/SVirtualJoystick.h"
+#include "LHG/Manager/SharedCharacterManager.h"
+#include "LHG/Character/SharedRailCharacter.h"
+#include "LHG/Input/RailInputConfig.h"
 #include "Components/InputComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 void ACrazyRooPlayerController::BeginPlay()
@@ -44,7 +50,20 @@ void ACrazyRooPlayerController::BeginPlay()
 		}
 	}
 
+	// ★ 추가: 게임 맵이라면 공유 캐릭터로 카메라 전환 (로비 맵에선 못 찾으니 자동 스킵)
+	//if (IsLocalController())
+	//{
+	//	ASharedRailCharacter* SharedCharacter = Cast<ASharedRailCharacter>(
+	//		UGameplayStatics::GetActorOfClass(GetWorld(), ASharedRailCharacter::StaticClass()));
+
+	//	if (SharedCharacter)
+	//	{
+	//		SetViewTargetWithBlend(SharedCharacter, 0.0f);
+	//		UE_LOG(LogCrazyRoo, Warning, TEXT("ViewTarget set to SharedCharacter"));
+	//	}
+	//}
 }
+
 
 void ACrazyRooPlayerController::SetupInputComponent()
 {
@@ -77,6 +96,46 @@ void ACrazyRooPlayerController::SetupInputComponent()
 					Subsystem->AddMappingContext(CurrentContext, 0);
 				}
 			}
+			// 공유 캐릭터 조작용 IMC (InputConfig가 세팅된 경우만)
+			if (InputConfig && InputConfig->InputMappingContext)
+			{
+				Subsystem->AddMappingContext(InputConfig->InputMappingContext, 1);
+			}
+		}
+		// ── 공유 캐릭터 조작 액션 바인딩 ──────────
+		UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent);
+		if (!EnhancedInput || !InputConfig)
+		{
+			return;
+		}
+
+		if (InputConfig->IA_Left)
+		{
+			EnhancedInput->BindAction(InputConfig->IA_Left, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputLeft);
+		}
+		if (InputConfig->IA_Right)
+		{
+			EnhancedInput->BindAction(InputConfig->IA_Right, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputRight);
+		}
+		if (InputConfig->IA_Jump)
+		{
+			EnhancedInput->BindAction(InputConfig->IA_Jump, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputJump);
+		}
+		if (InputConfig->IA_Slide)
+		{
+			EnhancedInput->BindAction(InputConfig->IA_Slide, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputSlide);
+		}
+		if (InputConfig->IA_Fire)
+		{
+			EnhancedInput->BindAction(InputConfig->IA_Fire, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputFire);
+		}
+		if (InputConfig->IA_CameraLeft)
+		{
+			EnhancedInput->BindAction(InputConfig->IA_CameraLeft, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputCameraLeft);
+		}
+		if (InputConfig->IA_CameraRight)
+		{
+			EnhancedInput->BindAction(InputConfig->IA_CameraRight, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputCameraRight);
 		}
 	}
 }
@@ -97,6 +156,23 @@ void ACrazyRooPlayerController::RequestRole(ECrazyRooPlayerRole DesiredRole)
 void ACrazyRooPlayerController::RequestMap(FName MapId)
 {
 	ServerTravel(MapId);
+}
+
+void ACrazyRooPlayerController::Client_SetupGameplayCamera_Implementation()
+{
+	// 데이터 테이블에서 게임 맵이라고 받아오면 공유 캐릭터로 카메라 전환
+	ASharedRailCharacter* SharedCharacter = Cast<ASharedRailCharacter>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), ASharedRailCharacter::StaticClass()));
+
+	if (SharedCharacter)
+	{
+		SetViewTargetWithBlend(SharedCharacter, 0.0f);
+		UE_LOG(LogCrazyRoo, Warning, TEXT("[Client] ViewTarget set to SharedCharacter"));
+	}
+	else
+	{
+		UE_LOG(LogCrazyRoo, Error, TEXT("[Client] SharedCharacter를 찾을 수 없습니다!"));
+	}
 }
 
 //테스트용 삭제예정
@@ -137,4 +213,131 @@ void ACrazyRooPlayerController::ClientRoleRejected_Implementation(ECrazyRooPlaye
 	FCrazyRooDebug::Print(this, Msg, FColor::Red);
 
 	OnRoleRejected.Broadcast(DeniedRole);
+}
+
+// ── 공유 캐릭터 조작 (RailCoopPlayerController 흡수- 한길님 파트) ──
+
+void ACrazyRooPlayerController::InputLeft()
+{
+	Server_RequestMoveLeft();
+}
+
+void ACrazyRooPlayerController::InputRight()
+{
+	Server_RequestMoveRight();
+}
+
+void ACrazyRooPlayerController::InputJump()
+{
+	Server_RequestJump();
+}
+
+void ACrazyRooPlayerController::InputSlide()
+{
+	Server_RequestSlide();
+}
+
+void ACrazyRooPlayerController::InputFire()
+{
+	FVector AimOrigin;
+	FVector AimDirection;
+
+	if (!GetMouseAimRay(AimOrigin, AimDirection))
+	{
+		return;
+	}
+
+	Server_RequestFireAimRay(AimOrigin, AimDirection);
+}
+
+void ACrazyRooPlayerController::InputCameraLeft()
+{
+	Server_RequestRotateCameraLeft();
+}
+
+void ACrazyRooPlayerController::InputCameraRight()
+{
+	Server_RequestRotateCameraRight();
+}
+
+bool ACrazyRooPlayerController::GetMouseAimRay(FVector& OutOrigin, FVector& OutDirection) const
+{
+	if (!DeprojectMousePositionToWorld(OutOrigin, OutDirection))
+	{
+		return false;
+	}
+
+	OutDirection.Normalize();
+	return true;
+}
+
+ASharedCharacterManager* ACrazyRooPlayerController::GetManagerOnServer() const
+{
+	ACrazyRooGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ACrazyRooGameMode>() : nullptr;
+	return GM ? GM->GetSharedCharacterManager() : nullptr;
+}
+
+ECrazyRooPlayerRole ACrazyRooPlayerController::GetMyRoleOnServer() const
+{
+	// ★ 역할의 진실은 PlayerState 하나 (컨트롤러에 중복 저장 안 함)
+	const ACrazyRooPlayerState* PS = GetPlayerState<ACrazyRooPlayerState>();
+	return PS ? PS->GetPlayerRole() : ECrazyRooPlayerRole::None;
+}
+
+void ACrazyRooPlayerController::Server_RequestMoveLeft_Implementation()
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		Manager->RequestMoveLeft(GetMyRoleOnServer());
+	}
+}
+
+void ACrazyRooPlayerController::Server_RequestMoveRight_Implementation()
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		Manager->RequestMoveRight(GetMyRoleOnServer());
+	}
+}
+
+void ACrazyRooPlayerController::Server_RequestJump_Implementation()
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		Manager->RequestJump(GetMyRoleOnServer());
+	}
+}
+
+void ACrazyRooPlayerController::Server_RequestSlide_Implementation()
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		Manager->RequestSlide(GetMyRoleOnServer());
+	}
+}
+
+void ACrazyRooPlayerController::Server_RequestRotateCameraLeft_Implementation()
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		Manager->RequestRotateCameraLeft(GetMyRoleOnServer());
+	}
+}
+
+void ACrazyRooPlayerController::Server_RequestRotateCameraRight_Implementation()
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		Manager->RequestRotateCameraRight(GetMyRoleOnServer());
+	}
+}
+
+void ACrazyRooPlayerController::Server_RequestFireAimRay_Implementation(
+	FVector_NetQuantize AimOrigin,
+	FVector_NetQuantizeNormal AimDirection)
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		Manager->RequestFireAimRay(GetMyRoleOnServer(), AimOrigin, AimDirection);
+	}
 }

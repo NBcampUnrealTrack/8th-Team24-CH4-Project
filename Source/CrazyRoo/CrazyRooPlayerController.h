@@ -8,6 +8,8 @@
 
 class UInputMappingContext;
 class UUserWidget;
+class URailInputConfig; //이름 변경 할 수도? 일단 테스트
+class ASharedCharacterManager; //이름 변경 할 수도? 일단 테스트
 enum class ECrazyRooPlayerRole : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleRejected, ECrazyRooPlayerRole, DeniedRole);
@@ -39,6 +41,10 @@ protected:
 	UPROPERTY(EditAnywhere, Config, Category = "Input|Touch Controls")
 	bool bForceTouchControls = false;
 
+	/** 공유 캐릭터 조작용 입력 에셋 묶음 (DA_RailInputConfig) */
+	UPROPERTY(EditDefaultsOnly, Category="Input|Rail")
+	URailInputConfig* InputConfig;
+
 	/** Gameplay initialization */
 	virtual void BeginPlay() override;
 
@@ -68,6 +74,9 @@ public:
 	//void Key_TravelToStage();
 	//
 
+	// 테스트: 새 맵에 도착했을 때 카메라를 세팅하라는 서버의 지시(Client RPC)
+	UFUNCTION(Client, Reliable)
+	void Client_SetupGameplayCamera();
 protected:
 
 	// [Client] 서버가 이미 선택된 역할이라고 거부하는 함수입니다.
@@ -80,4 +89,46 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerTravel(FName MapId);
+
+	// ── 공유 캐릭터 조작 (RailCoopPlayerController, 한길님 파트) ──
+
+	/** 로컬 입력 콜백 */
+	void InputLeft();
+	void InputRight();
+	void InputJump();
+	void InputSlide();
+	void InputFire();
+	void InputCameraLeft();
+	void InputCameraRight();
+
+	/** 클라 → 서버 조작 요청 RPC */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestMoveLeft();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestMoveRight();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestJump();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestSlide();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestRotateCameraLeft();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestRotateCameraRight();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestFireAimRay(FVector_NetQuantize AimOrigin, FVector_NetQuantizeNormal AimDirection);
+
+	/** 마우스 화면 위치 → 월드 Ray 변환 */
+	bool GetMouseAimRay(FVector& OutOrigin, FVector& OutDirection) const;
+
+	/** 서버에서 GameMode를 통해 Manager 획득 (로비 맵이면 nullptr) */
+	ASharedCharacterManager* GetManagerOnServer() const;
+
+	/** [Server] 내 PlayerState에서 역할 조회 (없으면 None) */
+	ECrazyRooPlayerRole GetMyRoleOnServer() const;
 };

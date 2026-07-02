@@ -4,6 +4,8 @@
 #include "LHG/Character/SharedRailCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
+#include "CrazyRooTypes.h"
+#include "CrazyRoo.h"
 
 ASharedCharacterManager::ASharedCharacterManager()
 {
@@ -46,138 +48,136 @@ void ASharedCharacterManager::InitializeSharedCharacter()
     }
 }
 
-void ASharedCharacterManager::RequestMoveLeft(ERailPlayerRole RequestRole)
+void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
 {
 	if (!HasAuthority() || !SharedCharacter)
-    {
-		return;
-    }
-
-	// bIgnorePlayerRole이 false일 때만 역할 검사
-	if (!bIgnorePlayerRole &&
-		RequestRole != ERailPlayerRole::LeftControl)
 	{
+		return;
+	}
+
+	// None은 테스트 모드여도 차단
+	//if (RequestRole == ECrazyRooPlayerRole::None && !bIgnorePlayerRole)
+	//{
+	//	return;
+	//}
+
+	if (!bIgnorePlayerRole && RequestRole != ECrazyRooPlayerRole::P_Left)
+	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("MoveLeft 무시: 요청역할 %s (P_Left 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
 
 	SharedCharacter->MoveLeft();
 }
 
-void ASharedCharacterManager::RequestMoveRight(ERailPlayerRole RequestRole)
+void ASharedCharacterManager::RequestMoveRight(ECrazyRooPlayerRole RequestRole)
 {
 	if (!HasAuthority() || !SharedCharacter)
-    {
-		return;
-    }
-
-	if (!bIgnorePlayerRole &&
-	 RequestRole != ERailPlayerRole::RightControl)
 	{
+		return;
+	}
+
+
+	if (!bIgnorePlayerRole && RequestRole != ECrazyRooPlayerRole::P_Right)
+	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("MoveRight 무시: 요청역할 %s (P_Right 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
 
 	SharedCharacter->MoveRight();
 }
 
-void ASharedCharacterManager::RequestJump(ERailPlayerRole RequestRole)
+void ASharedCharacterManager::RequestJump(ECrazyRooPlayerRole RequestRole)
 {
 	if (!HasAuthority() || !SharedCharacter)
-    {
-		return;
-    }
-
-	if (!bIgnorePlayerRole &&
-	  RequestRole != ERailPlayerRole::JumpSlideControl)
 	{
+		return;
+	}
+
+
+	if (!bIgnorePlayerRole && RequestRole != ECrazyRooPlayerRole::P_Acrobat)
+	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("Jump 무시: 요청역할 %s (P_Acrobat 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
 
 	SharedCharacter->DoJump();
 }
 
-void ASharedCharacterManager::RequestSlide(ERailPlayerRole RequestRole)
+void ASharedCharacterManager::RequestSlide(ECrazyRooPlayerRole RequestRole)
 {
 	if (!HasAuthority() || !SharedCharacter)
-    {
-		return;
-    }
-
-	if (!bIgnorePlayerRole &&
-		RequestRole != ERailPlayerRole::JumpSlideControl)
 	{
+		return;
+	}
+
+	if (!bIgnorePlayerRole && RequestRole != ECrazyRooPlayerRole::P_Acrobat)
+	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("Slide 무시: 요청역할 %s (P_Acrobat 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
 
 	SharedCharacter->DoSlide();
 }
 
-void ASharedCharacterManager::RequestFireToLocation(
-	ERailPlayerRole RequestRole,
-	const FVector& TargetLocation
-)
+void ASharedCharacterManager::RequestFireToLocation(ECrazyRooPlayerRole RequestRole, const FVector& TargetLocation)
 {
 	if (!HasAuthority() || !SharedCharacter)
 	{
 		return;
 	}
 
-	if (!bIgnorePlayerRole &&
-		RequestRole != ERailPlayerRole::AimShootControl)
+	if (!bIgnorePlayerRole && RequestRole != ECrazyRooPlayerRole::P_Shooter)
 	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("FireToLocation 무시: 요청역할 %s (P_Shooter 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
 
 	SharedCharacter->FireToLocation(TargetLocation);
 }
 
-void ASharedCharacterManager::RequestRotateCameraLeft(ERailPlayerRole RequestRole)
+void ASharedCharacterManager::RequestRotateCameraLeft(ECrazyRooPlayerRole RequestRole)
 {
 	if (!HasAuthority() || !SharedCharacter)
 	{
 		return;
 	}
 
-	// 테스트 모드가 아니면 AimShootControl만 카메라 회전 가능
-	if (!bIgnorePlayerRole &&
-		RequestRole != ERailPlayerRole::AimShootControl)
+	if (!bIgnorePlayerRole && RequestRole != ECrazyRooPlayerRole::P_Shooter)
 	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("CameraLeft 무시: 요청역할 %s (P_Shooter 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
 
 	SharedCharacter->RotateCameraLeft();
 }
 
-void ASharedCharacterManager::RequestRotateCameraRight(ERailPlayerRole RequestRole)
+void ASharedCharacterManager::RequestRotateCameraRight(ECrazyRooPlayerRole RequestRole)
 {
 	if (!HasAuthority() || !SharedCharacter)
 	{
 		return;
 	}
 
-	// 테스트 모드가 아니면 AimShootControl만 카메라 회전 가능
-	if (!bIgnorePlayerRole &&
-		RequestRole != ERailPlayerRole::AimShootControl)
+	if (!bIgnorePlayerRole && RequestRole != ECrazyRooPlayerRole::P_Shooter)
 	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("CameraRight 무시: 요청역할 %s (P_Shooter 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
 
 	SharedCharacter->RotateCameraRight();
 }
 
-void ASharedCharacterManager::RequestFireAimRay(
-	ERailPlayerRole RequestRole,
-	const FVector& AimOrigin,
-	const FVector& AimDirection
-)
+void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection)
 {
 	if (!HasAuthority() || !SharedCharacter)
 	{
 		return;
 	}
 
-	if (!bIgnorePlayerRole &&
-		RequestRole != ERailPlayerRole::AimShootControl)
+	if (!bIgnorePlayerRole && RequestRole != ECrazyRooPlayerRole::P_Shooter)
 	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("FireAimRay 무시: 요청역할 %s (P_Shooter 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
 

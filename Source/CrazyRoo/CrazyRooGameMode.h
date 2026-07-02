@@ -8,7 +8,7 @@
 
 
 enum class ECrazyRooPlayerRole : uint8;
-
+class ASharedCharacterManager; //공유 매니저 추가
 /**
  *  Simple GameMode for a third person game
  */
@@ -35,6 +35,9 @@ public:
 	void ChangeMap(FName MapId);
 
 
+	/** 게임플레이 맵에서만 존재. 로비에선 nullptr */
+	ASharedCharacterManager* GetSharedCharacterManager() const;
+
 protected:
 
 	// 다음 비어있는 역할 반환 (없으면 None)
@@ -50,6 +53,10 @@ protected:
 
 	// 접속할 플레이어에게 부여할 번호 (1부터 증가) 삭제 가능
 	int32 NextJoinOrder = 1;
+
+	// protected에 추가
+	UPROPERTY()
+	ASharedCharacterManager* SharedCharacterManager = nullptr;
 
 };
 

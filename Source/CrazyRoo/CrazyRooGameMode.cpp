@@ -8,7 +8,7 @@
 #include "CrazyRooPlayerController.h"
 #include "GameFramework/PlayerController.h"
 #include "System/CrazyRooGameInstance.h"
-
+#include "LHG/Manager/SharedCharacterManager.h"//파일경로 변경 가능할 수도
 
 ACrazyRooGameMode::ACrazyRooGameMode()
 {
@@ -17,12 +17,44 @@ ACrazyRooGameMode::ACrazyRooGameMode()
 	PlayerStateClass      = ACrazyRooPlayerState::StaticClass();
 	PlayerControllerClass = ACrazyRooPlayerController::StaticClass();
 	bUseSeamlessTravel    = true;
+	DefaultPawnClass = nullptr;
 }
 
 void ACrazyRooGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	FCrazyRooDebug::Print(this, TEXT("GameMode BeginPlay (서버 시작됨)"), FColor::Cyan);
+
+	//   게임플레이 맵일 때만 공유 캐릭터 매니저 스폰
+	//   ChangeMap()이 ServerTravel 전에 GI->CurrentMapId를 세팅해두므로,
+	//   새 맵의 BeginPlay 시점엔 이미 올바른 MapId가 있음
+	if (UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>())
+	{
+		//** Stand Alone MainLevel 테스트용 게임 맵으로 바로 열고 싶을 때 **
+		/*
+		const FString WorldName = GetWorld()->GetMapName().Mid(GetWorld()->StreamingLevelsPrefix.Len());
+		const FName FoundId = GI->FindMapIdByWorldName(WorldName);
+		if (FoundId != NAME_None && FoundId != GI->CurrentMapId)
+		{
+			GI->CurrentMapId = FoundId;
+			FCrazyRooDebug::Print(this, FString::Printf(TEXT("[직접실행] CurrentMapId 보정 -> %s"), *FoundId.ToString()), FColor::Yellow);
+		}*/
+		//**
+
+		if (const FCrazyRooStageInfo* Row = GI->FindStageRow(GI->CurrentMapId))
+		{
+			if (Row->bIsGameplayStage)
+			{
+				SharedCharacterManager = GetWorld()->SpawnActor<ASharedCharacterManager>(
+					ASharedCharacterManager::StaticClass(),
+					FVector::ZeroVector, FRotator::ZeroRotator);
+
+				FCrazyRooDebug::Print(this,
+					SharedCharacterManager ? TEXT("SharedCharacterManager 스폰 완료") : TEXT("SharedCharacterManager 스폰 실패"),
+					SharedCharacterManager ? FColor::Cyan : FColor::Red);
+			}
+		}
+	}
 
 }
 
@@ -58,6 +90,33 @@ void ACrazyRooGameMode::PostLogin(APlayerController* NewPlayer)
 	FCrazyRooDebug::Print(this, Msg, FColor::Green);
 
 	ApplyMatchStateForCurrentMap();
+
+	//** Stand Alone MainLevel 테스트용 게임 맵으로 바로 열고 싶을 때 **
+	/*
+	if (UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>())
+	{
+		if (const FCrazyRooStageInfo* Row = GI->FindStageRow(GI->CurrentMapId))
+		{
+			if (Row->bIsGameplayStage)
+			{
+				// 카메라를 공유 캐릭터로
+				if (ACrazyRooPlayerController* PC = Cast<ACrazyRooPlayerController>(NewPlayer))
+				{
+					PC->Client_SetupGameplayCamera();
+				}
+				// 로비를 안 거쳤으니 역할이 None → 빈 역할 자동 배정
+				if (ACrazyRooPlayerState* PS = NewPlayer ? NewPlayer->GetPlayerState<ACrazyRooPlayerState>() : nullptr)
+				{
+					if (PS->GetPlayerRole() == ECrazyRooPlayerRole::None)
+					{
+						PS->SetPlayerRole(FindFreeRole());
+					}
+				}
+			}
+		}
+	}*/
+	//**
+
 }
 
 // 플레이어가 방을 나갔을 때 실행됨
@@ -76,8 +135,10 @@ void ACrazyRooGameMode::HandleSeamlessTravelPlayer(AController*& C)
 
 	ACrazyRooPlayerState* PS = C ? C->GetPlayerState<ACrazyRooPlayerState>() : nullptr;
 	UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>();
+	ACrazyRooPlayerController* PC = Cast<ACrazyRooPlayerController>(C);
+
 	// 맵 이동 직후 플레이어가 새로 생성된 PlayerState을 들고오기 때문에 GameInstance에 저장되어 있는 ID따라 배정해줘야함
-	if (PS && GI)
+	if (PS && GI && PC)
 	{
 		// 접속 순번 복원(언제든 삭제 가능)
 		const int32 SavedOrder = GI->GetSavedPlayerJoinOrder(PS->GetPlayerId());
@@ -92,6 +153,16 @@ void ACrazyRooGameMode::HandleSeamlessTravelPlayer(AController*& C)
 		{
 			PS->SetPlayerRole(Saved);
 		}
+
+		//테스트용 추가
+		if (const FCrazyRooStageInfo* Row = GI->FindStageRow(GI->CurrentMapId))
+		{
+			if (Row->bIsGameplayStage)
+			{
+				PC->Client_SetupGameplayCamera();
+			}
+		}
+
 	}
 
 	ApplyMatchStateForCurrentMap();
@@ -178,6 +249,11 @@ void ACrazyRooGameMode::ChangeMap(FName MapId)
 
 	World->ServerTravel( Path);
 
+}
+
+ASharedCharacterManager* ACrazyRooGameMode::GetSharedCharacterManager() const
+{
+	return SharedCharacterManager;
 }
 
 // 빈 역할을 찾아주는 함수입니다.
