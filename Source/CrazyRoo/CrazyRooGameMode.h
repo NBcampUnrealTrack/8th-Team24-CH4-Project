@@ -23,6 +23,7 @@ public:
 	ACrazyRooGameMode();
 	virtual void BeginPlay() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void Logout(AController* Exiting) override;
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override; // 심리스 트래블로 넘어온 플레이어를 처리하는 함수
 
@@ -34,9 +35,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo")
 	void ChangeMap(FName MapId);
 
-
 	/** 게임플레이 맵에서만 존재. 로비에선 nullptr */
 	ASharedCharacterManager* GetSharedCharacterManager() const;
+
+	/** 게임플레이 맵에 플레이어가 진입했을 때 공통 세팅 (카메라 + 역할 폴백). 로비 맵이면 아무것도 안 함 */
+	void InitPlayerForCurrentMap(AController* C);
 
 protected:
 

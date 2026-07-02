@@ -30,17 +30,6 @@ void ACrazyRooGameMode::BeginPlay()
 	//   새 맵의 BeginPlay 시점엔 이미 올바른 MapId가 있음
 	if (UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>())
 	{
-		//** Stand Alone MainLevel 테스트용 게임 맵으로 바로 열고 싶을 때 **
-		/*
-		const FString WorldName = GetWorld()->GetMapName().Mid(GetWorld()->StreamingLevelsPrefix.Len());
-		const FName FoundId = GI->FindMapIdByWorldName(WorldName);
-		if (FoundId != NAME_None && FoundId != GI->CurrentMapId)
-		{
-			GI->CurrentMapId = FoundId;
-			FCrazyRooDebug::Print(this, FString::Printf(TEXT("[직접실행] CurrentMapId 보정 -> %s"), *FoundId.ToString()), FColor::Yellow);
-		}*/
-		//**
-
 		if (const FCrazyRooStageInfo* Row = GI->FindStageRow(GI->CurrentMapId))
 		{
 			if (Row->bIsGameplayStage)
@@ -90,7 +79,7 @@ void ACrazyRooGameMode::PostLogin(APlayerController* NewPlayer)
 	FCrazyRooDebug::Print(this, Msg, FColor::Green);
 
 	ApplyMatchStateForCurrentMap();
-
+	InitPlayerForCurrentMap(NewPlayer);
 	//** Stand Alone MainLevel 테스트용 게임 맵으로 바로 열고 싶을 때 **
 	/*
 	if (UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>())
@@ -117,6 +106,26 @@ void ACrazyRooGameMode::PostLogin(APlayerController* NewPlayer)
 	}*/
 	//**
 
+}
+
+void ACrazyRooGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+
+	// 규칙!! 데이터 테이블 RowName == 맵 에셋 이름
+	// 어떤 경로(트래블/직접실행/PIE/데디)로 열리든 실제 월드 이름에서 MapId를 역산한다
+	if (UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>())
+	{
+		const FString WorldName = GetWorld()->GetMapName().Mid(GetWorld()->StreamingLevelsPrefix.Len());
+		GI->CurrentMapId = FName(*WorldName);
+
+		if (!GI->FindStageRow(GI->CurrentMapId))
+		{
+			UE_LOG(LogCrazyRoo, Warning,
+				TEXT("[GameMode] 맵 '%s' 에 해당하는 데이터 테이블 행 없음 — RowName을 맵 이름과 맞춰주세요"),
+				*WorldName);
+		}
+	}
 }
 
 // 플레이어가 방을 나갔을 때 실행됨
@@ -166,6 +175,7 @@ void ACrazyRooGameMode::HandleSeamlessTravelPlayer(AController*& C)
 	}
 
 	ApplyMatchStateForCurrentMap();
+	InitPlayerForCurrentMap(C);
 }
 
 // [Server] 클라이언트가 컨트롤러를 통해 역할을 요청했을 때 판정하는 함수
@@ -254,6 +264,37 @@ void ACrazyRooGameMode::ChangeMap(FName MapId)
 ASharedCharacterManager* ACrazyRooGameMode::GetSharedCharacterManager() const
 {
 	return SharedCharacterManager;
+}
+
+void ACrazyRooGameMode::InitPlayerForCurrentMap(AController* C)
+{
+	UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>();
+	const FCrazyRooStageInfo* Row = GI ? GI->FindStageRow(GI->CurrentMapId) : nullptr;
+
+	if (!Row || !Row->bIsGameplayStage)
+	{
+		return; // 로비 등 비게임 맵이면 스킵
+	}
+
+	// 카메라를 공유 캐릭터로
+	if (ACrazyRooPlayerController* PC = Cast<ACrazyRooPlayerController>(C))
+	{
+		PC->Client_SetupGameplayCamera();
+	}
+
+	// 역할이 None인 채 게임 맵에 도착 → 빈 역할 자동 배정 (직접실행/난입 안전망)
+	//if (ACrazyRooPlayerState* PS = C ? C->GetPlayerState<ACrazyRooPlayerState>() : nullptr)
+	//{
+	//	if (PS->GetPlayerRole() == ECrazyRooPlayerRole::None)
+	//	{
+	//		const ECrazyRooPlayerRole AutoRole = FindFreeRole();
+	//		PS->SetPlayerRole(AutoRole);
+	//		if (GI)
+	//		{
+	//			GI->SavePlayerRole(PS->GetPlayerId(), AutoRole); // 이후 트래블에도 유지
+	//		}
+	//	}
+	//}
 }
 
 // 빈 역할을 찾아주는 함수입니다.

@@ -99,21 +99,3 @@ const FCrazyRooStageInfo* UCrazyRooGameInstance::FindStageRow(FName MapId) const
 	return MapDataTable->FindRow<FCrazyRooStageInfo>(MapId, TEXT("FindStageRow"));
 }
 
-FName UCrazyRooGameInstance::FindMapIdByWorldName(const FString& WorldName) const
-{
-	if (!MapDataTable)
-	{
-		return NAME_None;
-	}
-
-	for (const TPair<FName, uint8*>& Pair : MapDataTable->GetRowMap())
-	{
-		const FCrazyRooStageInfo* Row = reinterpret_cast<const FCrazyRooStageInfo*>(Pair.Value);
-		if (Row && !Row->Level.IsNull() && Row->Level.GetAssetName() == WorldName)
-		{
-			return Pair.Key;
-		}
-	}
-	return NAME_None;
-}
-

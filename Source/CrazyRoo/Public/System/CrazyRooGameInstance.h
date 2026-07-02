@@ -53,10 +53,7 @@ public:
 
 	/**  도착한 맵의 MapId. 트래블 시 저장, 도착 후 MatchState 결정에 사용 */
 	UPROPERTY()
-	FName CurrentMapId = TEXT("TestMap");//여기에 초기값을 할당해서 바로 처음 나오는 맵을 나오게 가능, NAME_None
-
-	/** 실제 월드 이름으로 데이터 테이블에서 MapId(RowName) 역조회. 못 찾으면 NAME_None */
-	FName FindMapIdByWorldName(const FString& WorldName) const;
+	FName CurrentMapId = NAME_None;//여기에 초기값을 할당해서 바로 처음 나오는 맵을 나오게 가능, NAME_None
 
 protected:
 	// 플레이어의 고유 ID와 선택한 역할을 저장하는 Map
