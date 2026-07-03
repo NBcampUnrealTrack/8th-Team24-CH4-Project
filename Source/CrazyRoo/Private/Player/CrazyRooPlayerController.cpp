@@ -17,6 +17,7 @@
 #include "Input/RailInputConfig.h"
 #include "Components/InputComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "InputActionValue.h" // 테슽트용 앞 뒤 움직임.
 
 
 void ACrazyRooPlayerController::BeginPlay()
@@ -136,6 +137,11 @@ void ACrazyRooPlayerController::SetupInputComponent()
 		if (InputConfig->IA_CameraRight)
 		{
 			EnhancedInput->BindAction(InputConfig->IA_CameraRight, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputCameraRight);
+		}
+		// [한길] 0703 테스트용 앞뒤 움직임
+		if (InputConfig->IA_Move)
+		{
+			EnhancedInput->BindAction(InputConfig->IA_Move, ETriggerEvent::Triggered, this, &ACrazyRooPlayerController::InputMove);
 		}
 	}
 }
@@ -339,5 +345,25 @@ void ACrazyRooPlayerController::Server_RequestFireAimRay_Implementation(
 	if (ASharedCharacterManager* Manager = GetManagerOnServer())
 	{
 		Manager->RequestFireAimRay(GetMyRoleOnServer(), AimOrigin, AimDirection);
+	}
+}
+
+// [한길] 0703 테스트용 앞뒤 움직임.
+void ACrazyRooPlayerController::InputMove(const FInputActionValue& Value)
+{
+	const float AxisValue = Value.Get<float>();
+
+	if (FMath::IsNearlyZero(AxisValue))
+	{
+		return;
+	}
+
+	Server_RequestMove(AxisValue);
+}
+void ACrazyRooPlayerController::Server_RequestMove_Implementation(float AxisValue)
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		Manager->RequestMove(AxisValue);
 	}
 }
