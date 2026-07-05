@@ -1,4 +1,4 @@
-// SharedRailCharacter.h
+﻿// SharedRailCharacter.h
 
 #pragma once
 
@@ -41,6 +41,11 @@ public:
 	// 카메라 회전 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
 	float CameraInterpSpeed = 8.f;
+
+	// [한길] 0703 카메라 각도 변경.
+	// 카메라 각도
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	float CameraPitch = -20.f;
 
 	// 총 사거리
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shooting")
@@ -90,7 +95,18 @@ public:
 );
 
 	// 현재 위치를 새로운 중앙 레일로 갱신
+	// 나중에 플레이 해보고 빼도 되는 기능.
 	void UpdateLaneCenter();
+
+	// [한길] 0703 코너링 시스템 추가
+	// 코너링이 성공했을 때 캐릭터를 지정된 각도만큼 회전시킵니다.
+	// 예) 좌회전 : -90°, 우회전 : +90°
+	void ApplyCornerTurn(float YawDelta);
+
+	// [한길] 0703 테스트용 앞뒤 움직임.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
+	float DebugMoveSpeed = 600.f;
+	void DebugMoveForward(float AxisValue);
 
 	/** [Server] 적/장애물이 플레이어에게 데미지를 줄 때 호출 */
 	void ApplyPlayerDamage(float Damage, AActor* DamageCauser);

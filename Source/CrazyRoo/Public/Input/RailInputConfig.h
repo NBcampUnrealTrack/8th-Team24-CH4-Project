@@ -51,4 +51,8 @@ public:
 	// E 키: 카메라 우측 90도 회전
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input|Action")
 	UInputAction* IA_CameraRight;
+
+	// [한길] 0703 테스트용 앞 뒤 움직임.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	UInputAction* IA_Move;
 };

@@ -30,7 +30,7 @@ ASharedRailCharacter::ASharedRailCharacter()
 
     // 쿼터뷰용 거리와 각도
     SpringArm->TargetArmLength = 800.f;
-    SpringArm->SetRelativeRotation(FRotator(-45.f, 0.f, 0.f));
+    SpringArm->SetRelativeRotation(FRotator(CameraPitch, 0.f, 0.f));
     SpringArm->bUsePawnControlRotation = false;
 
     // 카메라 생성
@@ -45,6 +45,12 @@ ASharedRailCharacter::ASharedRailCharacter()
 void ASharedRailCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+	// [한길] 0703 코너링 시스템.
+    // TurnJudgeBox에서 플레이어를 인식하기 위한 태그입니다.
+    // SharedCharacter는 Possess되지 않을 수도 있기 때문에
+    // Player 태그를 추가하여 IsPlayerActor() 조건을 만족시킵니다.
+    Tags.AddUnique(TEXT("Player"));
 
     StartLocation = GetActorLocation();
 	LaneCenterLocation = GetActorLocation();
@@ -67,6 +73,8 @@ void ASharedRailCharacter::BeginPlay()
     UE_LOG(LogTemp, Warning, TEXT("SharedRailCharacter BeginPlay"));
 
     UE_LOG(LogTemp, Warning, TEXT("StartLocation: %s"), *StartLocation.ToString());
+
+	UE_LOG(LogTemp, Warning, TEXT("CameraPitch: %f"), CameraPitch);
 }
 
 void ASharedRailCharacter::Tick(float DeltaTime)
@@ -95,7 +103,7 @@ void ASharedRailCharacter::Tick(float DeltaTime)
 
     // 카메라 회전은 서버/클라이언트 모두에서 보간
     FRotator CurrentRot = SpringArm->GetRelativeRotation();
-    FRotator TargetRot = FRotator(-45.f, TargetCameraYaw, 0.f);
+    FRotator TargetRot = FRotator(CameraPitch, TargetCameraYaw, 0.f);
 
     FRotator NewRot = FMath::RInterpTo(
         CurrentRot,
@@ -386,6 +394,39 @@ void ASharedRailCharacter::UpdateLaneCenter()
 	UE_LOG(LogTemp, Warning, TEXT("LaneCenter Updated: %s"), *LaneCenterLocation.ToString());
 }
 
+void ASharedRailCharacter::ApplyCornerTurn(float YawDelta)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// 캐릭터 회전 전에 카메라의 월드 회전을 저장합니다.
+	FRotator SavedSpringArmWorldRotation;
+
+	if (SpringArm)
+	{
+		SavedSpringArmWorldRotation = SpringArm->GetComponentRotation();
+	}
+
+	// 캐릭터만 회전시킵니다.
+	FRotator NewRotation = GetActorRotation();
+	NewRotation.Yaw += YawDelta;
+	SetActorRotation(NewRotation);
+
+	// 캐릭터가 회전하면서 SpringArm도 같이 돌았으므로,
+	// 저장해둔 월드 회전으로 다시 되돌립니다.
+	if (SpringArm)
+	{
+		SpringArm->SetWorldRotation(SavedSpringArmWorldRotation);
+
+		// 현재 카메라 yaw 값도 유지된 값으로 맞춰줍니다.
+		TargetCameraYaw = SpringArm->GetRelativeRotation().Yaw;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Corner Turn Applied Character Only : %f"), YawDelta);
+}
+
 void ASharedRailCharacter::GetLifetimeReplicatedProps(
     TArray<FLifetimeProperty>& OutLifetimeProps
 ) const
@@ -429,4 +470,28 @@ void ASharedRailCharacter::HandlePlayerDeath()
 
 	UE_LOG(LogTemp, Error, TEXT("[SERVER] 플레이어 사망"));
 	// TODO: 이후 GameMode에 게임오버 알림 (결과 맵 이동 등)
+}
+
+//[한길] 0703 테스트용 앞뒤 움직임.
+void ASharedRailCharacter::DebugMoveForward(float AxisValue)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (FMath::IsNearlyZero(AxisValue))
+	{
+		return;
+	}
+
+	FVector MoveDelta =
+		GetActorForwardVector() * AxisValue * DebugMoveSpeed * GetWorld()->GetDeltaSeconds();
+
+	// 캐릭터 실제 위치 이동
+	AddActorWorldOffset(MoveDelta, true);
+
+	// 중요:
+	// 레일 중앙 기준점도 같이 이동시켜야 Tick에서 원래 위치로 끌려가지 않음
+	LaneCenterLocation += MoveDelta;
 }

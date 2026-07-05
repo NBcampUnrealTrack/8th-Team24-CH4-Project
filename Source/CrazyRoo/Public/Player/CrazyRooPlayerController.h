@@ -11,6 +11,7 @@ class UUserWidget;
 class URailInputConfig; //이름 변경 할 수도? 일단 테스트
 class ASharedCharacterManager; //이름 변경 할 수도? 일단 테스트
 enum class ECrazyRooPlayerRole : uint8;
+struct FInputActionValue; // 테스트용 앞 뒤 움직임.
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleRejected, ECrazyRooPlayerRole, DeniedRole);
 
@@ -131,4 +132,9 @@ protected:
 
 	/** [Server] 내 PlayerState에서 역할 조회 (없으면 None) */
 	ECrazyRooPlayerRole GetMyRoleOnServer() const;
+
+	// [한길] 0703 테스트용 앞 뒤 움직임.
+	void InputMove(const FInputActionValue& Value);
+	UFUNCTION(Server, Unreliable)
+	void Server_RequestMove(float AxisValue);
 };

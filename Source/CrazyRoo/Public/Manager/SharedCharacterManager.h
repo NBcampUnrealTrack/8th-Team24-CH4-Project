@@ -1,13 +1,15 @@
-// SharedCharacterManager.h
+﻿// SharedCharacterManager.h
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "RunnerTypes.h"
 //#include "Dummy/RailTypes.h"
 #include "SharedCharacterManager.generated.h"
 
 class ASharedRailCharacter;
+class ATurnJudgeBox;
 enum class ECrazyRooPlayerRole : uint8;
 class AFlyingEnemySpawner;
 class AFlyingEnemy;
@@ -49,6 +51,15 @@ protected:
 	UPROPERTY()
 	ASharedRailCharacter* SharedCharacter = nullptr;
 
+	// [한길] 0703 코너링 시스템.
+	// 현재 SharedCharacter가 들어가 있는 TurnJudgeBox를 찾습니다.
+	// 없다면 nullptr을 반환합니다.
+	ATurnJudgeBox* FindActiveTurnJudgeBox() const;
+	// A/D 입력이 들어왔을 때
+	// 코너링 박스 안이라면 코너링 판정을 수행합니다.
+	// 성공 여부와 관계없이 박스 안이라면 true를 반환합니다.
+	bool TryHandleTurnInput(ERunnerTurnInputDirection InputDirection);
+
 	// ── 적 공격 이벤트 → 플레이어 HP 연결 ──
 	UFUNCTION()
 	void HandleEnemySpawned(AFlyingEnemySpawner* Spawner, AFlyingEnemy* SpawnedEnemy);
@@ -62,4 +73,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bIgnorePlayerRole = false;
 
+	// [한길] 0703 테스트용 앞뒤 움직임.
+	void RequestMove(float AxisValue);
 };
