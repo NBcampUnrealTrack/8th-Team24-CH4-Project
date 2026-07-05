@@ -71,7 +71,7 @@ protected:
 public:
 	// 테스트 목적으로 생성. true면 누구나 모든 입력 가능(Stand Alone으로 테스트용), false면 역할별 입력만 가능.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
-	bool bIgnorePlayerRole = false;
+	bool bIgnorePlayerRole = true;
 
 	// [한길] 0703 테스트용 앞뒤 움직임.
 	void RequestMove(float AxisValue);

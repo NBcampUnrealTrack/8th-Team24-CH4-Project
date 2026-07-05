@@ -50,7 +50,7 @@ void ASharedRailCharacter::BeginPlay()
     // TurnJudgeBox에서 플레이어를 인식하기 위한 태그입니다.
     // SharedCharacter는 Possess되지 않을 수도 있기 때문에
     // Player 태그를 추가하여 IsPlayerActor() 조건을 만족시킵니다.
-    Tags.AddUnique(TEXT("Player"));
+    //Tags.AddUnique(TEXT("Player")); //생성자에 태그를 이미 추가해서 이 부분은 주석처리하겠습니다! [무송]
 
     StartLocation = GetActorLocation();
 	LaneCenterLocation = GetActorLocation();
@@ -402,7 +402,7 @@ void ASharedRailCharacter::ApplyCornerTurn(float YawDelta)
 	}
 
 	// 캐릭터 회전 전에 카메라의 월드 회전을 저장합니다.
-	FRotator SavedSpringArmWorldRotation;
+	FRotator SavedSpringArmWorldRotation=FRotator::ZeroRotator;//초기화 안해서 빌드오류가 생겨서 일단 0으로 초기화 선언하겠습니다 [무송]
 
 	if (SpringArm)
 	{
