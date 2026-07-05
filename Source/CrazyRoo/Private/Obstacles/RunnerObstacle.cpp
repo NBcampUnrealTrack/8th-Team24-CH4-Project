@@ -12,6 +12,12 @@ ARunnerObstacle::ARunnerObstacle()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
+	// ── 네트워크: 서버가 스폰하면 클라에 자동 복제 ──
+	bReplicates = true;
+	bAlwaysRelevant = true;
+	// 스폰 후 안 움직이므로 SetReplicateMovement 생략 (스폰 위치는 복제에 포함)
+
+
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	RootComponent = SceneRoot;
 
@@ -36,6 +42,12 @@ void ARunnerObstacle::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 충돌 판정은 서버 전용
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	CurrentHP = MaxHP;
 	RefreshCollisionResponses();
 	CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ARunnerObstacle::HandleCollisionBeginOverlap);
@@ -43,6 +55,11 @@ void ARunnerObstacle::BeginPlay()
 
 void ARunnerObstacle::InitializeObstacle(ERunnerObstacleActionType InActionType, ERunnerLaneCoverage InLaneCoverage, ERunnerLane InLane)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	ActionType = InActionType;
 	LaneCoverage = InLaneCoverage;
 	Lane = InLaneCoverage == ERunnerLaneCoverage::AllLanes ? ERunnerLane::All : InLane;
@@ -79,6 +96,11 @@ float ARunnerObstacle::TakeDamage(float Damage, FDamageEvent const& DamageEvent,
 
 void ARunnerObstacle::ApplyDamage(float Damage, AActor* DamageCauser, const FVector& DamageLocation, const FVector& DamageImpulse)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (Damage <= 0.0f || !IsShootRequiredObstacle() || CurrentHP <= 0.0f)
 	{
 		return;

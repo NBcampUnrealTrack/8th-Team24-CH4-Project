@@ -56,6 +56,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shooting")
 	float MuzzleHeight = 80.f;
 
+	// ── 플레이어(공유 캐릭터) 체력 ──
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HP", meta=(ClampMin="1.0"))
+	float MaxPlayerHP = 2.f;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
+	float CurrentPlayerHP = 2.f;
+
 	// 왼쪽 레일로 이동
 	void MoveLeft();
 
@@ -84,6 +91,13 @@ public:
 
 	// 현재 위치를 새로운 중앙 레일로 갱신
 	void UpdateLaneCenter();
+
+	/** [Server] 적/장애물이 플레이어에게 데미지를 줄 때 호출 */
+	void ApplyPlayerDamage(float Damage, AActor* DamageCauser);
+
+	UFUNCTION(BlueprintPure, Category="HP")
+	bool IsPlayerDead() const { return CurrentPlayerHP <= 0.f; }
+	//
 
 protected:
 	virtual void BeginPlay() override;
@@ -116,5 +130,11 @@ protected:
 	// 캐릭터가 회전하거나 갈림길을 통과할 때 갱신됨
 	UPROPERTY(Replicated)
 	FVector LaneCenterLocation;
+
+	/** [Server] HP 0 도달 시 1회 실행. 지금은 로그만, 나중에 게임오버 연결 지점 */
+	void HandlePlayerDeath();
+
+	// 사망 처리 중복 방지
+	bool bPlayerDeathHandled = false;
 
 };

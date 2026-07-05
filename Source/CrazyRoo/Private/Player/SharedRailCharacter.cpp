@@ -38,6 +38,8 @@ ASharedRailCharacter::ASharedRailCharacter()
     FollowCamera->SetupAttachment(SpringArm);
 
     FollowCamera->bUsePawnControlRotation = false;
+
+	Tags.Add(TEXT("Player"));//스포너에 충돌과 피격판정을 태그로 검사해서 추가
 }
 
 void ASharedRailCharacter::BeginPlay()
@@ -46,6 +48,12 @@ void ASharedRailCharacter::BeginPlay()
 
     StartLocation = GetActorLocation();
 	LaneCenterLocation = GetActorLocation();
+
+	// 서버에서 초기 체력을 설정하고 클라이언트로 동기화 시킵니다
+	if (HasAuthority())
+	{
+		CurrentPlayerHP = MaxPlayerHP;
+	}
 
     if (!SpringArm)
     {
@@ -388,4 +396,37 @@ void ASharedRailCharacter::GetLifetimeReplicatedProps(
     DOREPLIFETIME(ASharedRailCharacter, bIsSliding);
     DOREPLIFETIME(ASharedRailCharacter, TargetCameraYaw);
 	DOREPLIFETIME(ASharedRailCharacter, LaneCenterLocation);
+	DOREPLIFETIME(ASharedRailCharacter, CurrentPlayerHP);
+}
+
+void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser)
+{
+	//  예외 처리: 서버가 아니거나, 데미지가 없거나, 이미 죽은 상태면 로직을 무시
+	if (!HasAuthority() || Damage <= 0.f || bPlayerDeathHandled)
+	{
+		return;
+	}
+
+	// 체력 차감: FMath::Max를 사용해 체력이 음수로 내려가지 않도록 안전하게 계산
+	CurrentPlayerHP = FMath::Max(0.f, CurrentPlayerHP - Damage);
+
+	// 피격 로그: 서버 디버깅을 위해 데미지 제공자와 남은 체력을 기록합니다.
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] 플레이어 피격! -%.1f (원인: %s) → HP %.1f / %.1f"),
+	   Damage,
+	   DamageCauser ? *DamageCauser->GetName() : TEXT("Unknown"),
+	   CurrentPlayerHP, MaxPlayerHP);
+
+	// 사망 체크: 체력이 모두 소진되면 사망 로직을 호출합니다.
+	if (CurrentPlayerHP <= 0.f)
+	{
+		HandlePlayerDeath();
+	}
+}
+
+void ASharedRailCharacter::HandlePlayerDeath()
+{
+	bPlayerDeathHandled = true;   // 이후 피격/중복 사망 차단
+
+	UE_LOG(LogTemp, Error, TEXT("[SERVER] 플레이어 사망"));
+	// TODO: 이후 GameMode에 게임오버 알림 (결과 맵 이동 등)
 }

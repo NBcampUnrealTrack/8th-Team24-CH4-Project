@@ -6,6 +6,8 @@
 #include "Engine/World.h"
 #include "Types/CrazyRooTypes.h"
 #include "CrazyRoo.h"
+#include "Enemies/FlyingEnemySpawner.h"
+#include "Enemies/FlyingEnemy.h"
 
 ASharedCharacterManager::ASharedCharacterManager()
 {
@@ -20,6 +22,25 @@ void ASharedCharacterManager::BeginPlay()
     Super::BeginPlay();
 
 	InitializeSharedCharacter();
+
+	// [Server] 맵 내 모든 적 스포너 탐색 및 스폰 이벤트 바인딩
+	if (HasAuthority())
+	{
+		TArray<AActor*> Spawners;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFlyingEnemySpawner::StaticClass(), Spawners);
+
+		// 각 스포너의 몬스터 생성 이벤트 구독
+		for (AActor* Actor : Spawners)
+		{
+			if (AFlyingEnemySpawner* Spawner = Cast<AFlyingEnemySpawner>(Actor))
+			{
+				Spawner->OnFlyingEnemySpawned.AddDynamic(this, &ASharedCharacterManager::HandleEnemySpawned);
+			}
+		}
+
+		UE_LOG(LogCrazyRoo, Warning, TEXT("[Manager] 적 스포너 %d개 구독 완료"), Spawners.Num());
+	}
+
 }
 
 void ASharedCharacterManager::InitializeSharedCharacter()
@@ -182,4 +203,21 @@ void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole,
 	}
 
 	SharedCharacter->FireByAimRay(AimOrigin, AimDirection);
+}
+
+// 적이 스폰될 때마다 호출 → 그 적의 공격 이벤트를 구독
+void ASharedCharacterManager::HandleEnemySpawned(AFlyingEnemySpawner* Spawner, AFlyingEnemy* SpawnedEnemy)
+{
+	if (IsValid(SpawnedEnemy))
+	{
+		SpawnedEnemy->OnFlyingEnemyAttackHitPlayer.AddDynamic(this, &ASharedCharacterManager::HandleEnemyAttackHitPlayer);
+	}
+}
+// 적의 주기 공격이 명중했을 때 → 공유 캐릭터 HP 차감
+void ASharedCharacterManager::HandleEnemyAttackHitPlayer(AFlyingEnemy* Enemy, AActor* TargetPlayer, float Damage)
+{
+	if (SharedCharacter)
+	{
+		SharedCharacter->ApplyPlayerDamage(Damage, Enemy);
+	}
 }

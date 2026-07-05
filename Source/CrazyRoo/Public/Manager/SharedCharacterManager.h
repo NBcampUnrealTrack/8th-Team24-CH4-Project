@@ -9,6 +9,8 @@
 
 class ASharedRailCharacter;
 enum class ECrazyRooPlayerRole : uint8;
+class AFlyingEnemySpawner;
+class AFlyingEnemy;
 
 UCLASS()
 class CRAZYROO_API ASharedCharacterManager :public AActor
@@ -47,8 +49,17 @@ protected:
 	UPROPERTY()
 	ASharedRailCharacter* SharedCharacter = nullptr;
 
+	// ── 적 공격 이벤트 → 플레이어 HP 연결 ──
+	UFUNCTION()
+	void HandleEnemySpawned(AFlyingEnemySpawner* Spawner, AFlyingEnemy* SpawnedEnemy);
+
+	UFUNCTION()
+	void HandleEnemyAttackHitPlayer(AFlyingEnemy* Enemy, AActor* TargetPlayer, float Damage);
+
+
 public:
 	// 테스트 목적으로 생성. true면 누구나 모든 입력 가능(Stand Alone으로 테스트용), false면 역할별 입력만 가능.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bIgnorePlayerRole = false;
+
 };

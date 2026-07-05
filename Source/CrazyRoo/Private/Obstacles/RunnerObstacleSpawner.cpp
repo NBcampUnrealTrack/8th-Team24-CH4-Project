@@ -24,6 +24,12 @@ void ARunnerObstacleSpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 장애물 생성은 서버 전용
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	RandomStream.Initialize(bUseRandomSeed ? RandomSeed : FMath::Rand());
 
 	if (bGenerateOnBeginPlay)
@@ -39,6 +45,11 @@ void ARunnerObstacleSpawner::EndPlay(EEndPlayReason::Type EndPlayReason)
 
 void ARunnerObstacleSpawner::StartSpawning()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	GenerateObstaclesOnce();
 }
 
@@ -48,6 +59,11 @@ void ARunnerObstacleSpawner::StopSpawning()
 
 ARunnerObstacle* ARunnerObstacleSpawner::SpawnOnce()
 {
+	if (!HasAuthority())
+	{
+		return nullptr;
+	}
+
 	const FRunnerObstacleSpawnGroup* Group = ChooseSpawnGroup();
 	if (!Group)
 	{
@@ -79,6 +95,11 @@ ARunnerObstacle* ARunnerObstacleSpawner::SpawnOnce()
 
 int32 ARunnerObstacleSpawner::GenerateObstaclesOnce()
 {
+	if (!HasAuthority())
+	{
+		return 0;
+	}
+
 	if (bHasGenerated)
 	{
 		if (!bAllowRegenerate)
@@ -141,6 +162,11 @@ int32 ARunnerObstacleSpawner::GenerateObstaclesOnce()
 
 void ARunnerObstacleSpawner::ResetGeneratedObstacles(bool bDestroyExisting)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (bDestroyExisting)
 	{
 		for (const TWeakObjectPtr<ARunnerObstacle>& Obstacle : GeneratedObstacles)

@@ -27,6 +27,13 @@ void AFlyingEnemySpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 스폰은 서버 전용. 클라에 배치된 스포너는 아무것도 하지 않는다
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+
 	RandomStream.Initialize(bUseRandomSeed ? RandomSeed : FMath::Rand());
 
 	if (bAutoStart)
@@ -43,6 +50,11 @@ void AFlyingEnemySpawner::EndPlay(EEndPlayReason::Type EndPlayReason)
 
 void AFlyingEnemySpawner::StartSpawning()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (!GetWorld())
 	{
 		return;
@@ -61,6 +73,12 @@ void AFlyingEnemySpawner::StopSpawning()
 
 AFlyingEnemy* AFlyingEnemySpawner::SpawnOnce()
 {
+	// 스폰은 서버 전용. 클라에 배치된 스포너는 아무것도 하지 않는다
+	if (!HasAuthority())
+	{
+		return nullptr;
+	}
+
 	CleanActiveEnemies();
 	if (ActiveEnemies.Num() >= FMath::Clamp(MaxActiveEnemies, 1, 3))
 	{
@@ -327,6 +345,12 @@ void AFlyingEnemySpawner::CleanActiveEnemies()
 
 void AFlyingEnemySpawner::HandleRunnerTurnSucceeded(float DestroyDelay)
 {
+	// 스폰 로직은 서버 전용
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	CleanActiveEnemies();
 
 	const float ResolvedDestroyDelay = DestroyDelay >= 0.0f ? DestroyDelay : DestroyDelayAfterTurn;

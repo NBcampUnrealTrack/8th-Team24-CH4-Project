@@ -17,6 +17,12 @@ AFlyingEnemy::AFlyingEnemy()
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	RootComponent = SceneRoot;
 
+	// ── 네트워크: 서버가 스폰하면 클라에 자동 복제 ──
+	bReplicates = true;
+	SetReplicateMovement(true);   // Tick의 위치 이동을 클라로 전파
+	bAlwaysRelevant = true;       // 폰 없는 구조라 관련성 탈락 방지
+	//
+
 	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	StaticMeshComponent->SetupAttachment(SceneRoot);
 	StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -41,6 +47,12 @@ AFlyingEnemy::AFlyingEnemy()
 void AFlyingEnemy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 판정/타이머는 서버 전용. 클라의 적은 복제된 위치를 받아 보여주기만 한다
+	if (!HasAuthority())
+	{
+		return;
+	}
 
 	CurrentHP = MaxHP;
 	MoveDirection = MoveDirection.GetSafeNormal();
@@ -68,6 +80,12 @@ void AFlyingEnemy::EndPlay(EEndPlayReason::Type EndPlayReason)
 void AFlyingEnemy::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	// 이동 계산은 서버 전용
+	if (!HasAuthority())
+	{
+		return;
+	}
 
 	if (!bMovementEnabled)
 	{
@@ -112,6 +130,11 @@ void AFlyingEnemy::Tick(float DeltaSeconds)
 
 void AFlyingEnemy::InitializeFlyingEnemy(const FVector& InMoveDirection, AActor* InTargetActor)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	SetMoveDirection(InMoveDirection);
 	SetMovementTarget(InTargetActor);
 	CurrentHP = MaxHP;
@@ -119,6 +142,11 @@ void AFlyingEnemy::InitializeFlyingEnemy(const FVector& InMoveDirection, AActor*
 
 void AFlyingEnemy::ConfigureSlotMovement(USceneComponent* InReferenceComponent, AActor* InReferenceActor, EFlyingEnemySlot InAssignedSlot, const FVector& InSlotLocalOffset, float InDescendSpeed, float InArrivalTolerance, float InAttackDelayAfterArrive, float InAttackDamage, AActor* InAttackTargetActor, bool bInFollowReferenceActor)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	SlotReferenceComponent = InReferenceComponent;
 	SlotReferenceActor = InReferenceActor;
 	AssignedSlot = InAssignedSlot;
@@ -176,6 +204,11 @@ void AFlyingEnemy::SetMoveMode(EFlyingEnemyMoveMode InMoveMode)
 
 void AFlyingEnemy::DisableEnemyInteraction()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	bCanAttack = false;
 	bMovementEnabled = false;
 	GetWorldTimerManager().ClearTimer(AttackTimerHandle);
@@ -200,6 +233,11 @@ void AFlyingEnemy::StopFollowingReference()
 
 void AFlyingEnemy::ScheduleDestroy(float Delay)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (!GetWorld())
 	{
 		Destroy();
@@ -225,7 +263,7 @@ bool AFlyingEnemy::IsPlayerActor(AActor* Actor) const
 		return false;
 	}
 
-	if (Actor->ActorHasTag(TEXT("Player")))
+	if (Actor->ActorHasTag(TEXT("Player"))) //태그로 플레이어 검색
 	{
 		return true;
 	}
@@ -247,6 +285,11 @@ float AFlyingEnemy::TakeDamage(float Damage, FDamageEvent const& DamageEvent, AC
 
 void AFlyingEnemy::ApplyDamage(float Damage, AActor* DamageCauser, const FVector& DamageLocation, const FVector& DamageImpulse)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (Damage <= 0.0f || CurrentHP <= 0.0f)
 	{
 		return;
