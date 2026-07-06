@@ -8,6 +8,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DamageEvents.h"
 #include "GameFramework/Pawn.h"
+#include "Player/SharedRailCharacter.h"
 #include "TimerManager.h"
 
 AFlyingEnemy::AFlyingEnemy()
@@ -95,18 +96,46 @@ void AFlyingEnemy::Tick(float DeltaSeconds)
 	if (bUseSlotMovement)
 	{
 		const FVector TargetLocation = GetCurrentSlotWorldLocation();
+		if (bDebugEnemyTracking)
+		{
+			DebugEnemyTrackingLogElapsed += DeltaSeconds;
+			if (DebugEnemyTrackingLogElapsed >= 1.0f)
+			{
+				DebugEnemyTrackingLogElapsed = 0.0f;
+
+				const FVector ReferenceLocation = GetReferenceLocation();
+				const ASharedRailCharacter* SharedRailCharacter = Cast<ASharedRailCharacter>(SlotReferenceActor.Get());
+				const FVector LaneCenterLocation = SharedRailCharacter ? SharedRailCharacter->GetLaneCenterLocation() : FVector::ZeroVector;
+
+				UE_LOG(LogTemp, Warning, TEXT("[FlyingEnemyTracking][Tick] Enemy=%s EnemyLocation=%s TargetLocation=%s ReferenceLocation=%s bSharedRail=%s LaneCenterLocation=%s bUseSlotMovement=%s bHasArrivedAtSlot=%s bFollowReferenceActor=%s bMovementEnabled=%s DistanceToTarget=%.2f"),
+					*GetName(),
+					*GetActorLocation().ToString(),
+					*TargetLocation.ToString(),
+					*ReferenceLocation.ToString(),
+					SharedRailCharacter ? TEXT("true") : TEXT("false"),
+					*LaneCenterLocation.ToString(),
+					bUseSlotMovement ? TEXT("true") : TEXT("false"),
+					bHasArrivedAtSlot ? TEXT("true") : TEXT("false"),
+					bFollowReferenceActor ? TEXT("true") : TEXT("false"),
+					bMovementEnabled ? TEXT("true") : TEXT("false"),
+					FVector::Dist(GetActorLocation(), TargetLocation));
+			}
+		}
+
 		if (!bHasArrivedAtSlot)
 		{
-			const FVector NextLocation = FMath::VInterpConstantTo(GetActorLocation(), TargetLocation, DeltaSeconds, DescendSpeed);
+			const FVector CurrentLocation = GetActorLocation();
+			FVector NextLocation = TargetLocation;
+			NextLocation.Z = FMath::FInterpConstantTo(CurrentLocation.Z, TargetLocation.Z, DeltaSeconds, DescendSpeed);
 			SetActorLocation(NextLocation, true);
 
-			const float DistanceToSlot = FVector::Dist(GetActorLocation(), TargetLocation);
-			if (!bAttackTimerStarted && DistanceToSlot <= SlotArrivalTolerance)
+			const float ZDistanceToSlot = FMath::Abs(GetActorLocation().Z - TargetLocation.Z);
+			if (!bAttackTimerStarted && ZDistanceToSlot <= SlotArrivalTolerance)
 			{
 				StartAttackDelay();
 			}
 
-			if (DistanceToSlot <= 1.0f)
+			if (ZDistanceToSlot <= 1.0f)
 			{
 				SetActorLocation(TargetLocation, false);
 				bHasArrivedAtSlot = true;
@@ -149,6 +178,10 @@ void AFlyingEnemy::ConfigureSlotMovement(USceneComponent* InReferenceComponent, 
 
 	SlotReferenceComponent = InReferenceComponent;
 	SlotReferenceActor = InReferenceActor;
+	if (!SlotReferenceActor.IsValid() && SlotReferenceComponent.IsValid())
+	{
+		SlotReferenceActor = SlotReferenceComponent->GetOwner();
+	}
 	AssignedSlot = InAssignedSlot;
 	SlotLocalOffset = InSlotLocalOffset;
 	DescendSpeed = FMath::Max(0.0f, InDescendSpeed);
@@ -174,12 +207,30 @@ void AFlyingEnemy::ConfigureSlotMovement(USceneComponent* InReferenceComponent, 
 		InitialReferenceLocation = GetActorLocation();
 		InitialReferenceForward = GetActorForwardVector().GetSafeNormal();
 		InitialSlotWorldLocation = GetActorLocation();
+		UE_LOG(LogTemp, Warning, TEXT("FlyingEnemy '%s' has no valid slot reference. Slot tracking will stay at the spawn location."), *GetName());
 	}
 	bHasArrivedAtSlot = false;
 	bUseSlotMovement = true;
 	bMovementEnabled = true;
 	bCanAttack = true;
 	bAttackTimerStarted = false;
+	DebugEnemyTrackingLogElapsed = 0.0f;
+	if (bDebugEnemyTracking)
+	{
+		const ASharedRailCharacter* SharedRailCharacter = Cast<ASharedRailCharacter>(SlotReferenceActor.Get());
+		UE_LOG(LogTemp, Warning, TEXT("[FlyingEnemyTracking][Configure] Enemy=%s SlotReferenceActor=%s SlotReferenceComponent=%s bSharedRail=%s bFollowReferenceActor=%s bHasInitialSlotTracking=%s InitialReferenceLocation=%s InitialReferenceForward=%s InitialSlotWorldLocation=%s SlotLocalOffset=%s AttackTargetActor=%s"),
+			*GetName(),
+			*GetNameSafe(SlotReferenceActor.Get()),
+			*GetNameSafe(SlotReferenceComponent.Get()),
+			SharedRailCharacter ? TEXT("true") : TEXT("false"),
+			bFollowReferenceActor ? TEXT("true") : TEXT("false"),
+			bHasInitialSlotTracking ? TEXT("true") : TEXT("false"),
+			*InitialReferenceLocation.ToString(),
+			*InitialReferenceForward.ToString(),
+			*InitialSlotWorldLocation.ToString(),
+			*SlotLocalOffset.ToString(),
+			*GetNameSafe(AttackTargetActor.Get()));
+	}
 	UpdateLookAtReference();
 }
 
@@ -254,6 +305,12 @@ void AFlyingEnemy::ScheduleDestroy(float Delay)
 	}
 
 	GetWorldTimerManager().SetTimer(DeferredDestroyTimerHandle, this, &AFlyingEnemy::DestroyByLifetime, Delay, false);
+}
+
+void AFlyingEnemy::SetDebugEnemyTracking(bool bInDebugEnemyTracking)
+{
+	bDebugEnemyTracking = bInDebugEnemyTracking;
+	DebugEnemyTrackingLogElapsed = 0.0f;
 }
 
 bool AFlyingEnemy::IsPlayerActor(AActor* Actor) const
@@ -398,14 +455,13 @@ void AFlyingEnemy::StartAttackDelay()
 
 FVector AFlyingEnemy::GetCurrentSlotWorldLocation() const
 {
-	if (!bHasInitialSlotTracking)
+	FTransform CurrentReferenceTransform;
+	if (GetReferenceTransform(CurrentReferenceTransform))
 	{
-		return GetActorLocation();
+		return CurrentReferenceTransform.TransformPosition(SlotLocalOffset);
 	}
 
-	const FVector ReferenceDelta = GetReferenceLocation() - InitialReferenceLocation;
-	const float ForwardMovementDelta = FVector::DotProduct(ReferenceDelta, InitialReferenceForward);
-	return InitialSlotWorldLocation + InitialReferenceForward * ForwardMovementDelta;
+	return bHasInitialSlotTracking ? InitialSlotWorldLocation : GetActorLocation();
 }
 
 FVector AFlyingEnemy::GetReferenceLocation() const
@@ -419,6 +475,16 @@ FVector AFlyingEnemy::GetReferenceLocation() const
 	return GetActorLocation();
 }
 
+FVector AFlyingEnemy::GetLookAtLocation() const
+{
+	if (IsValid(AttackTargetActor))
+	{
+		return AttackTargetActor->GetActorLocation();
+	}
+
+	return GetReferenceLocation();
+}
+
 bool AFlyingEnemy::GetReferenceTransform(FTransform& OutTransform) const
 {
 	if (SlotReferenceComponent.IsValid())
@@ -429,6 +495,12 @@ bool AFlyingEnemy::GetReferenceTransform(FTransform& OutTransform) const
 
 	if (SlotReferenceActor.IsValid())
 	{
+		if (const ASharedRailCharacter* SharedRailCharacter = Cast<ASharedRailCharacter>(SlotReferenceActor.Get()))
+		{
+			OutTransform = SharedRailCharacter->GetLaneCenterTransform();
+			return true;
+		}
+
 		OutTransform = SlotReferenceActor->GetActorTransform();
 		return true;
 	}
@@ -438,7 +510,7 @@ bool AFlyingEnemy::GetReferenceTransform(FTransform& OutTransform) const
 
 void AFlyingEnemy::UpdateLookAtReference()
 {
-	const FVector DirectionToReference = GetReferenceLocation() - GetActorLocation();
+	const FVector DirectionToReference = GetLookAtLocation() - GetActorLocation();
 	if (DirectionToReference.IsNearlyZero())
 	{
 		return;

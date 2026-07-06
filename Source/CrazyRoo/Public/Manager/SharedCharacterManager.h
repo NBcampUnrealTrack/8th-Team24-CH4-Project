@@ -61,6 +61,7 @@ protected:
 	// 코너링 박스 안이라면 코너링 판정을 수행합니다.
 	// 성공 여부와 관계없이 박스 안이라면 true를 반환합니다.
 	bool TryHandleTurnInput(ERunnerTurnInputDirection InputDirection);
+	void StopFlyingEnemiesForRunnerTurn();
 
 	// [한길] 0706 코너링 입력 한번으로 고정.
 	// 이미 코너링 처리가 완료된 판정 박스
