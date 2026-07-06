@@ -122,12 +122,21 @@ public:
 	float DebugMoveSpeed = 600.f;
 	void DebugMoveForward(float AxisValue);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
+	bool bDebugLaneCenterTracking = false;
+
 	/** [Server] 적/장애물이 플레이어에게 데미지를 줄 때 호출 */
 	void ApplyPlayerDamage(float Damage, AActor* DamageCauser);
 
 	UFUNCTION(BlueprintPure, Category="HP")
 	bool IsPlayerDead() const { return CurrentPlayerHP <= 0.f; }
 	//
+
+	UFUNCTION(BlueprintPure, Category="Rail")
+	FVector GetLaneCenterLocation() const;
+
+	UFUNCTION(BlueprintPure, Category="Rail")
+	FTransform GetLaneCenterTransform() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -166,5 +175,6 @@ protected:
 
 	// 사망 처리 중복 방지
 	bool bPlayerDeathHandled = false;
+	float DebugLaneCenterTrackingLogElapsed = 0.0f;
 
 };

@@ -306,6 +306,8 @@ bool ASharedCharacterManager::TryHandleTurnInput(ERunnerTurnInputDirection Input
 			TurnBox->GetRecommendedYawDeltaForInput(
 				InputDirection);
 
+		StopFlyingEnemiesForRunnerTurn();
+
 		// 캐릭터를 회전시킵니다.
 		SharedCharacter->ApplyCornerTurn(YawDelta);
 
@@ -319,6 +321,25 @@ bool ASharedCharacterManager::TryHandleTurnInput(ERunnerTurnInputDirection Input
 
 	// 코너링 박스 안에서는 일반 레일 이동을 하지 않도록 true를 반환합니다.
 	return true;
+}
+
+void ASharedCharacterManager::StopFlyingEnemiesForRunnerTurn()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	TArray<AActor*> Spawners;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFlyingEnemySpawner::StaticClass(), Spawners);
+
+	for (AActor* Actor : Spawners)
+	{
+		if (AFlyingEnemySpawner* Spawner = Cast<AFlyingEnemySpawner>(Actor))
+		{
+			Spawner->HandleRunnerTurnSucceeded();
+		}
+	}
 }
 
 //[한길] 0703 테스트용 앞뒤 움직임.

@@ -124,6 +124,22 @@ void ASharedRailCharacter::Tick(float DeltaTime)
         );
 
     SpringArm->SetRelativeRotation(NewRot);
+
+	if (bDebugLaneCenterTracking)
+	{
+		DebugLaneCenterTrackingLogElapsed += DeltaTime;
+		if (DebugLaneCenterTrackingLogElapsed >= 1.0f)
+		{
+			DebugLaneCenterTrackingLogElapsed = 0.0f;
+			UE_LOG(LogTemp, Warning, TEXT("[FlyingEnemyTracking][SharedRail] Actor=%s ActorLocation=%s LaneCenterLocation=%s ActorForwardVector=%s CurrentLane=%d MoveMode=%d"),
+				*GetName(),
+				*GetActorLocation().ToString(),
+				*LaneCenterLocation.ToString(),
+				*GetActorForwardVector().ToString(),
+				CurrentLane,
+				static_cast<int32>(MoveMode));
+		}
+	}
 }
 
 FVector ASharedRailCharacter::GetTargetLaneLocation() const
@@ -449,6 +465,17 @@ void ASharedRailCharacter::GetLifetimeReplicatedProps(
     DOREPLIFETIME(ASharedRailCharacter, TargetCameraYaw);
 	DOREPLIFETIME(ASharedRailCharacter, LaneCenterLocation);
 	DOREPLIFETIME(ASharedRailCharacter, CurrentPlayerHP);
+}
+
+FVector ASharedRailCharacter::GetLaneCenterLocation() const
+{
+	return LaneCenterLocation;
+}
+
+FTransform ASharedRailCharacter::GetLaneCenterTransform() const
+{
+	const FRotator LaneCenterRotation(0.0f, GetActorRotation().Yaw, 0.0f);
+	return FTransform(LaneCenterRotation, LaneCenterLocation);
 }
 
 void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser)

@@ -8,6 +8,7 @@
 #include "Enemies/FlyingEnemy.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/SharedRailCharacter.h"
 #include "TimerManager.h"
 
 AFlyingEnemySpawner::AFlyingEnemySpawner()
@@ -102,7 +103,7 @@ AFlyingEnemy* AFlyingEnemySpawner::SpawnOnce()
 		return nullptr;
 	}
 
-	const FTransform ReferenceTransform = GetReferenceTransform();
+	const FTransform ReferenceTransform = GetSlotReferenceTransform();
 	EFlyingEnemySlot AssignedSlot = EFlyingEnemySlot::Center;
 	if (!ChooseAvailableSlot(AssignedSlot))
 	{
@@ -112,6 +113,28 @@ AFlyingEnemy* AFlyingEnemySpawner::SpawnOnce()
 	const FVector SlotLocalOffset = GetSlotLocalOffset(AssignedSlot);
 	const FVector SpawnLocation = GetSpawnLocation(ReferenceTransform, AssignedSlot);
 	const FRotator SpawnRotation = GetLookAtReferenceRotation(SpawnLocation, ReferenceTransform);
+	const AActor* SlotReferenceActor = GetSlotReferenceActor();
+	const USceneComponent* SlotReferenceComponent = GetSlotReferenceComponent();
+	const AActor* ResolvedAttackTarget = GetAttackTarget();
+	const ASharedRailCharacter* SharedRailCharacter = Cast<ASharedRailCharacter>(SpawnReferenceActor);
+
+	if (bDebugEnemyTracking)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[FlyingEnemyTracking][SpawnerSpawn] Spawner=%s SpawnReferenceActor=%s SpawnReferenceComponent=%s bSharedRail=%s ReferenceLocation=%s SharedActorLocation=%s SharedLaneCenterLocation=%s Slot=%d SlotLocalOffset=%s SpawnLocation=%s SlotReferenceActor=%s SlotReferenceComponent=%s AttackTargetActor=%s"),
+			*GetName(),
+			*GetNameSafe(SpawnReferenceActor.Get()),
+			*GetNameSafe(SpawnReferenceComponent.Get()),
+			SharedRailCharacter ? TEXT("true") : TEXT("false"),
+			*ReferenceTransform.GetLocation().ToString(),
+			SharedRailCharacter ? *SharedRailCharacter->GetActorLocation().ToString() : TEXT("None"),
+			SharedRailCharacter ? *SharedRailCharacter->GetLaneCenterLocation().ToString() : TEXT("None"),
+			static_cast<int32>(AssignedSlot),
+			*SlotLocalOffset.ToString(),
+			*SpawnLocation.ToString(),
+			*GetNameSafe(SlotReferenceActor),
+			*GetNameSafe(SlotReferenceComponent),
+			*GetNameSafe(ResolvedAttackTarget));
+	}
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
@@ -119,7 +142,8 @@ AFlyingEnemy* AFlyingEnemySpawner::SpawnOnce()
 	AFlyingEnemy* SpawnedEnemy = GetWorld()->SpawnActor<AFlyingEnemy>(EnemyClass, SpawnLocation, SpawnRotation, SpawnParams);
 	if (SpawnedEnemy)
 	{
-		SpawnedEnemy->ConfigureSlotMovement(SpawnReferenceComponent, SpawnReferenceActor, AssignedSlot, SlotLocalOffset, DescendSpeed, SlotArrivalTolerance, AttackDelayAfterArrive, AttackDamage, GetAttackTarget(), bSpawnedEnemiesFollowReference);
+		SpawnedEnemy->SetDebugEnemyTracking(bDebugEnemyTracking);
+		SpawnedEnemy->ConfigureSlotMovement(GetSlotReferenceComponent(), GetSlotReferenceActor(), AssignedSlot, SlotLocalOffset, DescendSpeed, SlotArrivalTolerance, AttackDelayAfterArrive, AttackDamage, GetAttackTarget(), bSpawnedEnemiesFollowReference);
 		RegisterSpawnedEnemy(SpawnedEnemy);
 		OnFlyingEnemySpawned.Broadcast(this, SpawnedEnemy);
 	}
@@ -239,10 +263,20 @@ FTransform AFlyingEnemySpawner::GetReferenceTransform() const
 
 	if (IsValid(SpawnReferenceActor))
 	{
+		if (const ASharedRailCharacter* SharedRailCharacter = Cast<ASharedRailCharacter>(SpawnReferenceActor))
+		{
+			return SharedRailCharacter->GetLaneCenterTransform();
+		}
+
 		return SpawnReferenceActor->GetActorTransform();
 	}
 
 	return FTransform::Identity;
+}
+
+FTransform AFlyingEnemySpawner::GetSlotReferenceTransform() const
+{
+	return GetReferenceTransform();
 }
 
 bool AFlyingEnemySpawner::ResolveSpawnReference()
@@ -305,7 +339,9 @@ FVector AFlyingEnemySpawner::GetSpawnLocation(const FTransform& ReferenceTransfo
 
 FRotator AFlyingEnemySpawner::GetLookAtReferenceRotation(const FVector& SpawnLocation, const FTransform& ReferenceTransform) const
 {
-	const FVector DirectionToReference = ReferenceTransform.GetLocation() - SpawnLocation;
+	const AActor* LookAtTarget = GetAttackTarget();
+	const FVector LookAtLocation = IsValid(LookAtTarget) ? LookAtTarget->GetActorLocation() : ReferenceTransform.GetLocation();
+	const FVector DirectionToReference = LookAtLocation - SpawnLocation;
 	if (DirectionToReference.IsNearlyZero())
 	{
 		return GetActorRotation();
@@ -315,6 +351,16 @@ FRotator AFlyingEnemySpawner::GetLookAtReferenceRotation(const FVector& SpawnLoc
 	LookAtRotation.Pitch = 0.0f;
 	LookAtRotation.Roll = 0.0f;
 	return LookAtRotation;
+}
+
+AActor* AFlyingEnemySpawner::GetSlotReferenceActor() const
+{
+	return SpawnReferenceActor.Get();
+}
+
+USceneComponent* AFlyingEnemySpawner::GetSlotReferenceComponent() const
+{
+	return SpawnReferenceComponent.Get();
 }
 
 AActor* AFlyingEnemySpawner::GetAttackTarget() const

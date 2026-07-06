@@ -97,6 +97,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Lifetime", meta = (ClampMin = "0.0", Units = "s", EditCondition = "bAutoDestroyAfterLifetime"))
 	float Lifetime = 8.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Debug")
+	bool bDebugEnemyTracking = false;
+
 	FTimerHandle LifetimeTimerHandle;
 	FTimerHandle AttackTimerHandle;
 	FTimerHandle DeferredDestroyTimerHandle;
@@ -110,6 +113,7 @@ protected:
 	bool bDestroyEventBroadcasted = false;
 	bool bAttackTimerStarted = false;
 	bool bHasInitialSlotTracking = false;
+	float DebugEnemyTrackingLogElapsed = 0.0f;
 
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Enemy|Events")
@@ -148,6 +152,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Enemy")
 	void ScheduleDestroy(float Delay);
 
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Debug")
+	void SetDebugEnemyTracking(bool bInDebugEnemyTracking);
+
 	UFUNCTION(BlueprintPure, Category = "Enemy|Slot")
 	EFlyingEnemySlot GetAssignedSlot() const { return AssignedSlot; }
 
@@ -179,6 +186,7 @@ protected:
 	void StartAttackDelay();
 	FVector GetCurrentSlotWorldLocation() const;
 	FVector GetReferenceLocation() const;
+	FVector GetLookAtLocation() const;
 	bool GetReferenceTransform(FTransform& OutTransform) const;
 	void UpdateLookAtReference();
 	FVector ResolveMoveDirection() const;
