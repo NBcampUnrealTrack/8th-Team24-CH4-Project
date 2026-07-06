@@ -277,10 +277,19 @@ bool ASharedCharacterManager::TryHandleTurnInput(ERunnerTurnInputDirection Input
 	// 코너링 박스가 없으면 일반 레일 이동을 수행해야 하므로 false
 	if (!TurnBox)
 	{
+		// [한길] 0706 박스 밖으로 나갔다면 다음 코너에서 다시 판정 가능하도록 초기화
+		ResolvedTurnJudgeBox = nullptr;
 		return false;
 	}
 
-	// 팀원이 만든 TurnJudgeBox의 코너링 판정을 수행합니다.
+	// [한길] 0706 이미 이 박스에서 코너링에 성공했다면 다시 처리하지 않음
+	if (ResolvedTurnJudgeBox.IsValid() &&
+		ResolvedTurnJudgeBox.Get() == TurnBox)
+	{
+		return true;
+	}
+
+	// TurnJudgeBox의 코너링 판정을 수행합니다.
 	const bool bTurnSucceeded =
 		TurnBox->TryResolveTurn(
 			SharedCharacter,
@@ -289,6 +298,9 @@ bool ASharedCharacterManager::TryHandleTurnInput(ERunnerTurnInputDirection Input
 
 	if (bTurnSucceeded)
 	{
+		// [한길] 0706 캐릭터 회전 성공시 판정 완료 박스로 변경.
+		ResolvedTurnJudgeBox = TurnBox;
+
 		// TurnJudgeBox에서 권장하는 회전 각도(-90 또는 +90)를 가져옵니다.
 		const float YawDelta =
 			TurnBox->GetRecommendedYawDeltaForInput(
@@ -297,18 +309,15 @@ bool ASharedCharacterManager::TryHandleTurnInput(ERunnerTurnInputDirection Input
 		// 캐릭터를 회전시킵니다.
 		SharedCharacter->ApplyCornerTurn(YawDelta);
 
-		UE_LOG(LogTemp, Warning,
-			TEXT("Turn Succeeded"));
+		UE_LOG(LogTemp, Warning, TEXT("Turn Succeeded"));
 	}
 	else
 	{
 		// 코너링 실패
-		UE_LOG(LogTemp, Warning,
-			TEXT("Turn Failed"));
+		UE_LOG(LogTemp, Warning, TEXT("Turn Failed"));
 	}
 
-	// 코너링 박스 안에서는
-	// 일반 레일 이동을 하지 않도록 true를 반환합니다.
+	// 코너링 박스 안에서는 일반 레일 이동을 하지 않도록 true를 반환합니다.
 	return true;
 }
 

@@ -88,6 +88,17 @@ void ASharedRailCharacter::Tick(float DeltaTime)
         return;
     }
 
+	// [한길] 0706 자동전진 모드일때 자동으로 전진.
+	if (MoveMode == ERunnerMoveMode::AutoMove)
+	{
+		FVector MoveDelta =
+			GetActorForwardVector() * AutoForwardMoveSpeed * DeltaTime;
+
+		AddActorWorldOffset(MoveDelta, true);
+
+		LaneCenterLocation += MoveDelta;
+	}
+
     FVector CurrentLocation = GetActorLocation();
     FVector TargetLocation = GetTargetLaneLocation();
 
@@ -476,6 +487,12 @@ void ASharedRailCharacter::HandlePlayerDeath()
 void ASharedRailCharacter::DebugMoveForward(float AxisValue)
 {
 	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// 0706 수동 모드가 아니면 W/S 입력 무시
+	if (MoveMode != ERunnerMoveMode::ManualMove)
 	{
 		return;
 	}

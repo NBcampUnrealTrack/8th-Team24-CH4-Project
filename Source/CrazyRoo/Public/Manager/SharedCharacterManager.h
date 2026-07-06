@@ -60,6 +60,12 @@ protected:
 	// 성공 여부와 관계없이 박스 안이라면 true를 반환합니다.
 	bool TryHandleTurnInput(ERunnerTurnInputDirection InputDirection);
 
+	// [한길] 0706 코너링 입력 한번으로 고정.
+	// 이미 코너링 처리가 완료된 판정 박스
+	// 이 박스 안에서는 다시 A/D를 눌러도 코너링을 처리하지 않습니다.
+	UPROPERTY()
+	TWeakObjectPtr<ATurnJudgeBox> ResolvedTurnJudgeBox;
+
 	// ── 적 공격 이벤트 → 플레이어 HP 연결 ──
 	UFUNCTION()
 	void HandleEnemySpawned(AFlyingEnemySpawner* Spawner, AFlyingEnemy* SpawnedEnemy);

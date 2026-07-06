@@ -9,6 +9,14 @@
 class USpringArmComponent;
 class UCameraComponent;
 
+// [한길] 0706 자동전진 / 수동전진
+UENUM(BlueprintType)
+enum class ERunnerMoveMode : uint8
+{
+	AutoMove UMETA(DisplayName = "Auto Move"),
+	ManualMove UMETA(DisplayName = "Manual Move")
+};
+
 UCLASS()
 class CRAZYROO_API ASharedRailCharacter : public ACharacter
 {
@@ -103,8 +111,14 @@ public:
 	// 예) 좌회전 : -90°, 우회전 : +90°
 	void ApplyCornerTurn(float YawDelta);
 
-	// [한길] 0703 테스트용 앞뒤 움직임.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
+	// [한길] 0703 테스트용 앞뒤 움직임. 0706 자동 전진 / 수동 전진 구분.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
+	ERunnerMoveMode MoveMode = ERunnerMoveMode::AutoMove;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Auto")
+	float AutoForwardMoveSpeed = 600.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Debug")
 	float DebugMoveSpeed = 600.f;
 	void DebugMoveForward(float AxisValue);
 
