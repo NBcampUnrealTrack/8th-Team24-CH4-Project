@@ -50,6 +50,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Obstacle|Damage")
 	float CurrentHP = 1.0f;
 
+	// 장애물이 플레이어와 충돌했을 때 입힐 데미지 변수 (에디터에서 수정 가능)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Damage", meta = (ClampMin = "0.0"))
+	float ObstacleDamage = 1.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Collision")
 	bool bBlockVisibilityWhenShootRequired = true;
 
@@ -77,6 +81,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Obstacle|Damage")
 	float GetCurrentHP() const { return CurrentHP; }
+
+	// [추가] 매니저가 데미지 값을 꺼내갈 수 있도록 하는 Getter 함수
+	UFUNCTION(BlueprintPure, Category = "Obstacle|Damage")
+	float GetObstacleDamage() const { return ObstacleDamage; }
 
 	UFUNCTION(BlueprintPure, Category = "Obstacle|Damage")
 	bool IsShootRequiredObstacle() const { return ActionType == ERunnerObstacleActionType::ShootRequired; }

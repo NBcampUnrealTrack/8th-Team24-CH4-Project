@@ -449,13 +449,21 @@ void ASharedRailCharacter::GetLifetimeReplicatedProps(
     DOREPLIFETIME(ASharedRailCharacter, TargetCameraYaw);
 	DOREPLIFETIME(ASharedRailCharacter, LaneCenterLocation);
 	DOREPLIFETIME(ASharedRailCharacter, CurrentPlayerHP);
+	DOREPLIFETIME(ASharedRailCharacter, bIsInvincible); // 무적 상태 동기화 추가
 }
 
-void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser)
+void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser, bool bIgnoreInvincibility)
 {
 	//  예외 처리: 서버가 아니거나, 데미지가 없거나, 이미 죽은 상태면 로직을 무시
 	if (!HasAuthority() || Damage <= 0.f || bPlayerDeathHandled)
 	{
+		return;
+	}
+
+	// 무적 상태라면 데미지 무시
+	if (!bIgnoreInvincibility && bIsInvincible)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[SERVER] 1초 무적 상태"));
 		return;
 	}
 
@@ -472,6 +480,21 @@ void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser)
 	if (CurrentPlayerHP <= 0.f)
 	{
 		HandlePlayerDeath();
+	}
+	else
+	{
+		// 일반 장애물일 때만 무적 타이머를 부여합니다.
+		if (!bIgnoreInvincibility)
+		{
+			bIsInvincible = true;
+			GetWorldTimerManager().SetTimer(
+				InvincibilityTimerHandle,
+				this,
+				&ASharedRailCharacter::ResetInvincibility,
+				InvincibilityDuration,
+				false
+			);
+		}
 	}
 }
 
@@ -511,4 +534,13 @@ void ASharedRailCharacter::DebugMoveForward(float AxisValue)
 	// 중요:
 	// 레일 중앙 기준점도 같이 이동시켜야 Tick에서 원래 위치로 끌려가지 않음
 	LaneCenterLocation += MoveDelta;
+}
+
+void ASharedRailCharacter::ResetInvincibility()
+{
+	if (HasAuthority())
+	{
+		bIsInvincible = false;
+		UE_LOG(LogTemp, Warning, TEXT("[SERVER] 무적 시간이 종료"));
+	}
 }

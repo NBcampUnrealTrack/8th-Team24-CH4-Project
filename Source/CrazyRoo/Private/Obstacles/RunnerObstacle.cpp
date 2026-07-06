@@ -36,6 +36,9 @@ ARunnerObstacle::ARunnerObstacle()
 	CollisionBox->SetGenerateOverlapEvents(true);
 
 	CurrentHP = MaxHP;
+
+	// 장애물 기본 데미지 초기화
+	ObstacleDamage = 1.0f;
 }
 
 void ARunnerObstacle::BeginPlay()
@@ -135,10 +138,18 @@ void ARunnerObstacle::NotifyDanger(const FVector& DangerLocation, AActor* Danger
 
 void ARunnerObstacle::HandleCollisionBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	//로그 확인용
+	//UE_LOG(LogTemp, Warning, TEXT("[OBSTACLE] 무언가 닿음: %s"), OtherActor ? *OtherActor->GetName() : TEXT("None"));
+
 	if (IsPlayerActor(OtherActor))
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("[OBSTACLE] 닿은 액터가 플레이어로 판정됨! 델리게이트 발송."));
 		OnPlayerHitObstacle.Broadcast(this, OtherActor, ActionType, LaneCoverage, Lane);
 	}
+	//else
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("[OBSTACLE] 닿았지만 플레이어가 아님."));
+	//}
 }
 
 void ARunnerObstacle::RefreshCollisionResponses()

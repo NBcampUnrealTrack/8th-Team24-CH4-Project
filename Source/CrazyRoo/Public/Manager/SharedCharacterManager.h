@@ -13,6 +13,8 @@ class ATurnJudgeBox;
 enum class ECrazyRooPlayerRole : uint8;
 class AFlyingEnemySpawner;
 class AFlyingEnemy;
+class ARunnerObstacleSpawner;
+class ARunnerObstacle;
 
 UCLASS()
 class CRAZYROO_API ASharedCharacterManager :public AActor
@@ -72,6 +74,15 @@ protected:
 
 	UFUNCTION()
 	void HandleEnemyAttackHitPlayer(AFlyingEnemy* Enemy, AActor* TargetPlayer, float Damage);
+
+	// ── 장애물 충돌 이벤트 → 플레이어 HP 연결 ──
+	UFUNCTION()
+	void HandleObstacleSpawned(ARunnerObstacleSpawner* Spawner, ARunnerObstacle* SpawnedObstacle);
+
+	// RunnerObstacle.h의 FRunnerObstaclePlayerOverlapSignature
+	UFUNCTION()
+	void HandlePlayerHitObstacle(ARunnerObstacle* Obstacle, AActor* PlayerActor,
+		ERunnerObstacleActionType ActionType, ERunnerLaneCoverage LaneCoverage, ERunnerLane Lane);
 
 
 public:

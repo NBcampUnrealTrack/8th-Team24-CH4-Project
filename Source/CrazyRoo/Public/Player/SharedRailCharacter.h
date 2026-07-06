@@ -76,6 +76,19 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
 	float CurrentPlayerHP = 2.f;
 
+	// 무적 상태 복제 (나중에 클라이언트에서 피격 후 후처리 켤 때 사용)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
+	bool bIsInvincible = false;
+
+	// 무적 유지 시간
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HP")
+	float InvincibilityDuration = 1.0f;
+
+	FTimerHandle InvincibilityTimerHandle;
+
+	// 무적 상태 해제
+	void ResetInvincibility();
+
 	// 왼쪽 레일로 이동
 	void MoveLeft();
 
@@ -123,7 +136,7 @@ public:
 	void DebugMoveForward(float AxisValue);
 
 	/** [Server] 적/장애물이 플레이어에게 데미지를 줄 때 호출 */
-	void ApplyPlayerDamage(float Damage, AActor* DamageCauser);
+	void ApplyPlayerDamage(float Damage, AActor* DamageCauser, bool bIgnoreInvincibility);
 
 	UFUNCTION(BlueprintPure, Category="HP")
 	bool IsPlayerDead() const { return CurrentPlayerHP <= 0.f; }
