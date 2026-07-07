@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "RunnerTypes.h"
+#include "Player/SharedRailCharacter.h"
 //#include "Dummy/RailTypes.h"
 #include "SharedCharacterManager.generated.h"
 
@@ -93,4 +94,17 @@ public:
 
 	// [한길] 0703 테스트용 앞뒤 움직임.
 	void RequestMove(float AxisValue);
+
+	// [한길] 0707 GameMode나 UI, 디버그시 이동 모드 쉽게 변경 가능하게 하기 위한 함수들입니다.
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void SetSharedCharacterMoveMode(ERunnerMoveMode NewMoveMode);
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void StartAutoMove();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void StartManualMove();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void StopMove();
 };

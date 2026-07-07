@@ -88,15 +88,29 @@ void ASharedRailCharacter::Tick(float DeltaTime)
         return;
     }
 
-	// [한길] 0706 자동전진 모드일때 자동으로 전진.
-	if (MoveMode == ERunnerMoveMode::AutoMove)
+	// [한길] 0707 이동 모드에 따라 전진 방식 결정
+	switch (MoveMode)
 	{
-		FVector MoveDelta =
-			GetActorForwardVector() * AutoForwardMoveSpeed * DeltaTime;
+    case ERunnerMoveMode::Stop:
+		// 정지 상태. 자동 이동 없음.
+		break;
 
-		AddActorWorldOffset(MoveDelta, true);
+    case ERunnerMoveMode::AutoMove:
+    	{
+    		// 자동 전진
+    		FVector MoveDelta =
+				GetActorForwardVector() * AutoForwardMoveSpeed * DeltaTime;
 
-		LaneCenterLocation += MoveDelta;
+    		AddActorWorldOffset(MoveDelta, true);
+
+    		// 레일 기준점도 같이 이동해야 원래 위치로 끌려가지 않습니다.
+    		LaneCenterLocation += MoveDelta;
+    		break;
+    	}
+
+    case ERunnerMoveMode::ManualMove:
+		// 수동 모드에서는 W/S 입력에서만 이동합니다.
+		break;
 	}
 
     FVector CurrentLocation = GetActorLocation();
@@ -561,6 +575,19 @@ void ASharedRailCharacter::DebugMoveForward(float AxisValue)
 	// 중요:
 	// 레일 중앙 기준점도 같이 이동시켜야 Tick에서 원래 위치로 끌려가지 않음
 	LaneCenterLocation += MoveDelta;
+}
+
+// [한길] 0707 움직임 방식 변경 함수.
+void ASharedRailCharacter::SetMoveMode(ERunnerMoveMode NewMoveMode)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	MoveMode = NewMoveMode;
+
+	UE_LOG(LogTemp, Warning, TEXT("MoveMode Changed: %d"), static_cast<uint8>(MoveMode));
 }
 
 void ASharedRailCharacter::ResetInvincibility()

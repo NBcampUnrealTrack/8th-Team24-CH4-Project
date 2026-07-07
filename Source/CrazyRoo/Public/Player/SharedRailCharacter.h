@@ -9,10 +9,11 @@
 class USpringArmComponent;
 class UCameraComponent;
 
-// [한길] 0706 자동전진 / 수동전진
+// [한길] 0706 자동전진 / 수동전진 0707 멈춤 추가.
 UENUM(BlueprintType)
 enum class ERunnerMoveMode : uint8
 {
+	Stop UMETA(DisplayName = "Stop"),
 	AutoMove UMETA(DisplayName = "Auto Move"),
 	ManualMove UMETA(DisplayName = "Manual Move")
 };
@@ -40,7 +41,7 @@ public:
 
 	// 레일 간격
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Rail")
-	float LaneDistance = 300.f;
+	float LaneDistance = 550.f;
 
 	// 레일 변경 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Rail")
@@ -134,6 +135,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Debug")
 	float DebugMoveSpeed = 600.f;
 	void DebugMoveForward(float AxisValue);
+
+	// [한길] 0707 MoveMode 변경 함수.
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void SetMoveMode(ERunnerMoveMode NewMoveMode);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bDebugLaneCenterTracking = false;

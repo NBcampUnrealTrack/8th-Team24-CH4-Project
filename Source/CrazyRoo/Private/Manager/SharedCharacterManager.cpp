@@ -425,3 +425,29 @@ void ASharedCharacterManager::HandlePlayerHitObstacle(ARunnerObstacle* Obstacle,
 		SharedCharacter->ApplyPlayerDamage(Obstacle->GetObstacleDamage(), Obstacle, false);
 	}
 }
+
+// [한길] 0707 전/후진 변경.
+void ASharedCharacterManager::SetSharedCharacterMoveMode(ERunnerMoveMode NewMoveMode)
+{
+	if (!HasAuthority() || !SharedCharacter)
+	{
+		return;
+	}
+
+	SharedCharacter->SetMoveMode(NewMoveMode);
+}
+
+void ASharedCharacterManager::StartAutoMove()
+{
+	SetSharedCharacterMoveMode(ERunnerMoveMode::AutoMove);
+}
+
+void ASharedCharacterManager::StartManualMove()
+{
+	SetSharedCharacterMoveMode(ERunnerMoveMode::ManualMove);
+}
+
+void ASharedCharacterManager::StopMove()
+{
+	SetSharedCharacterMoveMode(ERunnerMoveMode::Stop);
+}
