@@ -45,6 +45,28 @@ struct FCrazyRooStageInfo : public FTableRowBase
 };
 
 
+/** 방 목록 UI 정보 (SearchResults를 BP에서 쓸 수 있게 가공) */
+USTRUCT(BlueprintType)
+struct FCrazyRooRoomInfo
+{
+	GENERATED_BODY()
+
+	/** JoinRoomByIndex 에 넘길 인덱스 (SessionSearch->SearchResults 배열 인덱스) */
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	int32 SearchResultIndex = -1;
+
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	FString RoomName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	int32 CurrentPlayers = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	int32 MaxPlayers = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	int32 PingMs = 0;
+};
 
 /** 3개 레인 중 현재 위치. */
 //UENUM(BlueprintType)
