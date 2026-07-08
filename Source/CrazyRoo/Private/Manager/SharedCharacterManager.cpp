@@ -9,6 +9,8 @@
 #include "Cornering/TurnJudgeBox.h"
 #include "Enemies/FlyingEnemySpawner.h"
 #include "Enemies/FlyingEnemy.h"
+#include "Obstacles/RunnerObstacleSpawner.h"
+#include "Obstacles/RunnerObstacle.h"
 
 ASharedCharacterManager::ASharedCharacterManager()
 {
@@ -40,6 +42,35 @@ void ASharedCharacterManager::BeginPlay()
 		}
 
 		UE_LOG(LogCrazyRoo, Warning, TEXT("[Manager] 적 스포너 %d개 구독 완료"), Spawners.Num());
+
+		// 장애물 스포너 바인딩 (앞으로 나올 장애물용)
+		// 장애물을 다 부수면 10초 뒤에 새로운 장애물이 다시 리스폰된다 or 특정 조건이 되면 추가 장애물을 소환한다라는 기믹이 생긴다면 필요
+		//TArray<AActor*> ObstacleSpawners;
+		//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARunnerObstacleSpawner::StaticClass(), ObstacleSpawners);
+		//for (AActor* Actor : ObstacleSpawners)
+		//{
+		//	if (ARunnerObstacleSpawner* Spawner = Cast<ARunnerObstacleSpawner>(Actor))
+		//	{
+		//		Spawner->OnObstacleSpawned.AddDynamic(this, &ASharedCharacterManager::HandleObstacleSpawned);
+		//	}
+		//}
+		//UE_LOG(LogCrazyRoo, Warning, TEXT("[Manager] 장애물 스포너 %d개 구독 완료"), ObstacleSpawners.Num());
+
+		// =========================================================================
+		// 이미 맵에 스폰되어 버린 장애물들 직접 구독
+		// =========================================================================
+		TArray<AActor*> ExistingObstacles;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARunnerObstacle::StaticClass(), ExistingObstacles);
+
+		for (AActor* Actor : ExistingObstacles)
+		{
+			if (ARunnerObstacle* Obstacle = Cast<ARunnerObstacle>(Actor))
+			{
+				// 이미 맵에 존재하는 장애물을 찾아 플레이어 피격 이벤트를 직접 묶어줍니다.
+				Obstacle->OnPlayerHitObstacle.AddUniqueDynamic(this, &ASharedCharacterManager::HandlePlayerHitObstacle);
+			}
+		}
+		UE_LOG(LogCrazyRoo, Warning, TEXT("[Manager] 장애물 %d개 구독 완료"), ExistingObstacles.Num());
 	}
 
 }
@@ -277,10 +308,19 @@ bool ASharedCharacterManager::TryHandleTurnInput(ERunnerTurnInputDirection Input
 	// 코너링 박스가 없으면 일반 레일 이동을 수행해야 하므로 false
 	if (!TurnBox)
 	{
+		// [한길] 0706 박스 밖으로 나갔다면 다음 코너에서 다시 판정 가능하도록 초기화
+		ResolvedTurnJudgeBox = nullptr;
 		return false;
 	}
 
-	// 팀원이 만든 TurnJudgeBox의 코너링 판정을 수행합니다.
+	// [한길] 0706 이미 이 박스에서 코너링에 성공했다면 다시 처리하지 않음
+	if (ResolvedTurnJudgeBox.IsValid() &&
+		ResolvedTurnJudgeBox.Get() == TurnBox)
+	{
+		return true;
+	}
+
+	// TurnJudgeBox의 코너링 판정을 수행합니다.
 	const bool bTurnSucceeded =
 		TurnBox->TryResolveTurn(
 			SharedCharacter,
@@ -289,27 +329,48 @@ bool ASharedCharacterManager::TryHandleTurnInput(ERunnerTurnInputDirection Input
 
 	if (bTurnSucceeded)
 	{
+		// [한길] 0706 캐릭터 회전 성공시 판정 완료 박스로 변경.
+		ResolvedTurnJudgeBox = TurnBox;
+
 		// TurnJudgeBox에서 권장하는 회전 각도(-90 또는 +90)를 가져옵니다.
 		const float YawDelta =
 			TurnBox->GetRecommendedYawDeltaForInput(
 				InputDirection);
 
+		StopFlyingEnemiesForRunnerTurn();
+
 		// 캐릭터를 회전시킵니다.
 		SharedCharacter->ApplyCornerTurn(YawDelta);
 
-		UE_LOG(LogTemp, Warning,
-			TEXT("Turn Succeeded"));
+		UE_LOG(LogTemp, Warning, TEXT("Turn Succeeded"));
 	}
 	else
 	{
 		// 코너링 실패
-		UE_LOG(LogTemp, Warning,
-			TEXT("Turn Failed"));
+		UE_LOG(LogTemp, Warning, TEXT("Turn Failed"));
 	}
 
-	// 코너링 박스 안에서는
-	// 일반 레일 이동을 하지 않도록 true를 반환합니다.
+	// 코너링 박스 안에서는 일반 레일 이동을 하지 않도록 true를 반환합니다.
 	return true;
+}
+
+void ASharedCharacterManager::StopFlyingEnemiesForRunnerTurn()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	TArray<AActor*> Spawners;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFlyingEnemySpawner::StaticClass(), Spawners);
+
+	for (AActor* Actor : Spawners)
+	{
+		if (AFlyingEnemySpawner* Spawner = Cast<AFlyingEnemySpawner>(Actor))
+		{
+			Spawner->HandleRunnerTurnSucceeded();
+		}
+	}
 }
 
 //[한길] 0703 테스트용 앞뒤 움직임.
@@ -331,11 +392,62 @@ void ASharedCharacterManager::HandleEnemySpawned(AFlyingEnemySpawner* Spawner, A
 		SpawnedEnemy->OnFlyingEnemyAttackHitPlayer.AddDynamic(this, &ASharedCharacterManager::HandleEnemyAttackHitPlayer);
 	}
 }
+
 // 적의 주기 공격이 명중했을 때 → 공유 캐릭터 HP 차감
 void ASharedCharacterManager::HandleEnemyAttackHitPlayer(AFlyingEnemy* Enemy, AActor* TargetPlayer, float Damage)
 {
 	if (SharedCharacter)
 	{
-		SharedCharacter->ApplyPlayerDamage(Damage, Enemy);
+		// 총 쏘는 공격은 무적 상태를 무시하고 무조건 데미지를 줍니다.
+		SharedCharacter->ApplyPlayerDamage(Damage, Enemy, true);
 	}
+}
+
+void ASharedCharacterManager::HandleObstacleSpawned(ARunnerObstacleSpawner* Spawner, ARunnerObstacle* SpawnedObstacle)
+{
+	if (IsValid(SpawnedObstacle))
+	{
+		SpawnedObstacle->OnPlayerHitObstacle.AddDynamic(this, &ASharedCharacterManager::HandlePlayerHitObstacle);
+	}
+}
+
+void ASharedCharacterManager::HandlePlayerHitObstacle(ARunnerObstacle* Obstacle, AActor* PlayerActor,
+	ERunnerObstacleActionType ActionType, ERunnerLaneCoverage LaneCoverage, ERunnerLane Lane)
+{
+	// [디버그 추가] 매니저가 이벤트를 제대로 받았는지 확인
+	UE_LOG(LogTemp, Warning, TEXT("[MANAGER] 장애물 충돌 이벤트 수신 완료!"));
+
+	// 들어온 PlayerActor가 현재 조작중인 공유 캐릭터가 맞는지 확인
+	if (SharedCharacter && SharedCharacter == PlayerActor)
+	{
+		// 상속받은 여러가지 Obstacle bp에서 데미지를 수정 가능
+		// [수정] 장애물 충돌은 기본값(false)이 들어가므로 1초 무적이 정상 적용됩니다.
+		SharedCharacter->ApplyPlayerDamage(Obstacle->GetObstacleDamage(), Obstacle, false);
+	}
+}
+
+// [한길] 0707 전/후진 변경.
+void ASharedCharacterManager::SetSharedCharacterMoveMode(ERunnerMoveMode NewMoveMode)
+{
+	if (!HasAuthority() || !SharedCharacter)
+	{
+		return;
+	}
+
+	SharedCharacter->SetMoveMode(NewMoveMode);
+}
+
+void ASharedCharacterManager::StartAutoMove()
+{
+	SetSharedCharacterMoveMode(ERunnerMoveMode::AutoMove);
+}
+
+void ASharedCharacterManager::StartManualMove()
+{
+	SetSharedCharacterMoveMode(ERunnerMoveMode::ManualMove);
+}
+
+void ASharedCharacterManager::StopMove()
+{
+	SetSharedCharacterMoveMode(ERunnerMoveMode::Stop);
 }

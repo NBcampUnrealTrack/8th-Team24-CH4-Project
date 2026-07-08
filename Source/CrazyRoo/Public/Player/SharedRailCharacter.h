@@ -9,6 +9,15 @@
 class USpringArmComponent;
 class UCameraComponent;
 
+// [한길] 0706 자동전진 / 수동전진 0707 멈춤 추가.
+UENUM(BlueprintType)
+enum class ERunnerMoveMode : uint8
+{
+	Stop UMETA(DisplayName = "Stop"),
+	AutoMove UMETA(DisplayName = "Auto Move"),
+	ManualMove UMETA(DisplayName = "Manual Move")
+};
+
 UCLASS()
 class CRAZYROO_API ASharedRailCharacter : public ACharacter
 {
@@ -32,7 +41,7 @@ public:
 
 	// 레일 간격
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Rail")
-	float LaneDistance = 300.f;
+	float LaneDistance = 550.f;
 
 	// 레일 변경 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Rail")
@@ -67,6 +76,19 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
 	float CurrentPlayerHP = 2.f;
+
+	// 무적 상태 복제 (나중에 클라이언트에서 피격 후 후처리 켤 때 사용)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
+	bool bIsInvincible = false;
+
+	// 무적 유지 시간
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HP")
+	float InvincibilityDuration = 1.0f;
+
+	FTimerHandle InvincibilityTimerHandle;
+
+	// 무적 상태 해제
+	void ResetInvincibility();
 
 	// 왼쪽 레일로 이동
 	void MoveLeft();
@@ -103,17 +125,36 @@ public:
 	// 예) 좌회전 : -90°, 우회전 : +90°
 	void ApplyCornerTurn(float YawDelta);
 
-	// [한길] 0703 테스트용 앞뒤 움직임.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
+	// [한길] 0703 테스트용 앞뒤 움직임. 0706 자동 전진 / 수동 전진 구분.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
+	ERunnerMoveMode MoveMode = ERunnerMoveMode::AutoMove;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Auto")
+	float AutoForwardMoveSpeed = 600.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Debug")
 	float DebugMoveSpeed = 600.f;
 	void DebugMoveForward(float AxisValue);
 
+	// [한길] 0707 MoveMode 변경 함수.
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void SetMoveMode(ERunnerMoveMode NewMoveMode);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
+	bool bDebugLaneCenterTracking = false;
+
 	/** [Server] 적/장애물이 플레이어에게 데미지를 줄 때 호출 */
-	void ApplyPlayerDamage(float Damage, AActor* DamageCauser);
+	void ApplyPlayerDamage(float Damage, AActor* DamageCauser, bool bIgnoreInvincibility);
 
 	UFUNCTION(BlueprintPure, Category="HP")
 	bool IsPlayerDead() const { return CurrentPlayerHP <= 0.f; }
 	//
+
+	UFUNCTION(BlueprintPure, Category="Rail")
+	FVector GetLaneCenterLocation() const;
+
+	UFUNCTION(BlueprintPure, Category="Rail")
+	FTransform GetLaneCenterTransform() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -152,5 +193,6 @@ protected:
 
 	// 사망 처리 중복 방지
 	bool bPlayerDeathHandled = false;
+	float DebugLaneCenterTrackingLogElapsed = 0.0f;
 
 };

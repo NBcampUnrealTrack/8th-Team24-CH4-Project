@@ -18,6 +18,7 @@
 #include "Components/InputComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "InputActionValue.h" // 테슽트용 앞 뒤 움직임.
+#include "System/CrazyRooGameInstance.h"
 
 
 void ACrazyRooPlayerController::BeginPlay()
@@ -51,7 +52,7 @@ void ACrazyRooPlayerController::BeginPlay()
 		}
 	}
 
-	// ★ 추가: 게임 맵이라면 공유 캐릭터로 카메라 전환 (로비 맵에선 못 찾으니 자동 스킵)
+	//  게임 맵이라면 공유 캐릭터로 카메라 전환 (로비 맵에선 못 찾으니 자동 스킵)
 	//if (IsLocalController())
 	//{
 	//	ASharedRailCharacter* SharedCharacter = Cast<ASharedRailCharacter>(
@@ -159,6 +160,12 @@ void ACrazyRooPlayerController::RequestRole(ECrazyRooPlayerRole DesiredRole)
 	ServerRequestRole(DesiredRole);
 }
 
+// [준비] 버튼 → 서버 RPC
+void ACrazyRooPlayerController::RequestReady(bool bReady)
+{
+	ServerSetReady(bReady);
+}
+
 void ACrazyRooPlayerController::RequestMap(FName MapId)
 {
 	ServerTravel(MapId);
@@ -192,10 +199,51 @@ void ACrazyRooPlayerController::Client_SetupGameplayCamera_Implementation()
 void ACrazyRooPlayerController::ServerTravel_Implementation(FName MapId)
 {
 	// 서버에서 실행됨 → GameMode 에 트래블 위임
-	if (ACrazyRooGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ACrazyRooGameMode>() : nullptr)
+	//if (ACrazyRooGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ACrazyRooGameMode>() : nullptr)
+	//{
+	//	GM->ChangeMap(MapId);
+	//}
+
+	// 서버에서 실행됨
+	const ACrazyRooPlayerState* PS = GetPlayerState<ACrazyRooPlayerState>();
+	ACrazyRooGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ACrazyRooGameMode>() : nullptr;
+	UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>();
+
+	if (!PS || !GM || !GI)
 	{
-		GM->ChangeMap(MapId);
+		return;
 	}
+
+	// 방장만 맵 이동 요청 가능 (모든 맵 공통 — 클라 UI를 우회한 치트성 호출도 여기서 차단)
+	if (!PS->IsHost())
+	{
+		FCrazyRooDebug::Print(this, FString::Printf(
+			TEXT("[SERVER] 플레이어-%d 트래블 요청 거부: 방장이 아님"), PS->GetJoinOrder()), FColor::Red);
+		return;
+	}
+
+	// 로비에서 출발할 때만 시작 조건 검사
+	if (GI->CurrentMapId == TEXT("TestMap")) //여기서 역할 선택 방 선택 이후로 넘어가는 맵(데이터 에셋 Row) 이름이 같아야 함
+	{
+		if (GM->IsDevSoloStart())
+		{
+			// [Dev] 테스트 규칙: 방장이 역할만 골랐으면 통과 (인원/준비 검사 생략)
+			if (PS->GetPlayerRole() == ECrazyRooPlayerRole::None)
+			{
+				FCrazyRooDebug::Print(this, TEXT("[SERVER] 트래블 거부: 역할을 먼저 선택하세요"), FColor::Red);
+				return;
+			}
+		}
+		else if (!GM->AreAllPlayersReady())
+		{
+			// 정식 규칙: 최소 인원 + 전원 준비
+			FCrazyRooDebug::Print(this, TEXT("[SERVER] 트래블 거부: 인원 부족 또는 전원 준비 안 됨"), FColor::Red);
+			return;
+		}
+	}
+
+	// 검증 통과 → GameMode 에 트래블 위임
+	GM->ChangeMap(MapId);
 }
 
 
@@ -222,6 +270,22 @@ void ACrazyRooPlayerController::ClientRoleRejected_Implementation(ECrazyRooPlaye
 }
 
 // ── 공유 캐릭터 조작 (RailCoopPlayerController 흡수- 한길님 파트) ──
+
+void ACrazyRooPlayerController::ServerSetReady_Implementation(bool bReady)
+{
+	if (ACrazyRooPlayerState* PS = GetPlayerState<ACrazyRooPlayerState>())
+	{
+		// 예외 처리: 캐릭터(역할)를 선택하지 않은 빈 상태(None)에서는 '준비 완료'를 누를 수 없도록 막습니다.
+		if (bReady && PS->GetPlayerRole() == ECrazyRooPlayerRole::None)
+		{
+			return;
+		}
+
+		// 조건을 통과했다면 PlayerState의 레디 상태를 업데이트합니다.
+		// (bIsReady 변수는 Replicated 처리되어 있으므로 알아서 모든 클라이언트 화면에 갱신됩니다)
+		PS->SetIsReady(bReady);
+	}
+}
 
 void ACrazyRooPlayerController::InputLeft()
 {

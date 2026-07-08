@@ -35,6 +35,18 @@ public:
 	// [Server Only]
 	void SetJoinOrder(int32 InJoinOrder);
 
+	// ─── 방 생성,참가 파트 ───
+
+	UFUNCTION(BlueprintPure, Category="CrazyRoo")
+	bool IsHost() const { return bIsHost; }
+
+	UFUNCTION(BlueprintPure, Category="CrazyRoo")
+	bool IsReady() const { return bIsReady; }
+
+	// [Server Only] 방장 권한 및 준비 상태 설정
+	void SetIsHost(bool bNew);
+	void SetIsReady(bool bNew);
+
 protected:
 	// 내 역할 변수입니다.
 	// ReplicatedUsing = OnRep_PlayerRole 의 의미: "서버가 이 값을 바꿔서 내 클라로 전송이 완료되는 순간, 즉시 OnRep_PlayerRole() 함수를 자동 실행해라" 라는 뜻
@@ -48,4 +60,15 @@ protected:
 	//접속 순번 (서버가 부여, 클라로 리플리케이트)
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "CrazyRoo")
 	int32 JoinOrder = 0;
+
+	// ─── 방 생성,참가 파트 ───
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="CrazyRoo")
+	bool bIsHost = false;
+
+	UPROPERTY(ReplicatedUsing=OnRep_IsReady, BlueprintReadOnly, Category="CrazyRoo")
+	bool bIsReady = false;
+
+	UFUNCTION()
+	void OnRep_IsReady();
 };

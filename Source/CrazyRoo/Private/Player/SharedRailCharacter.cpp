@@ -1,4 +1,4 @@
-// SharedRailCharacter.cpp
+﻿// SharedRailCharacter.cpp
 
 #include "Player/SharedRailCharacter.h"
 #include "Camera/CameraComponent.h"
@@ -88,6 +88,31 @@ void ASharedRailCharacter::Tick(float DeltaTime)
         return;
     }
 
+	// [한길] 0707 이동 모드에 따라 전진 방식 결정
+	switch (MoveMode)
+	{
+    case ERunnerMoveMode::Stop:
+		// 정지 상태. 자동 이동 없음.
+		break;
+
+    case ERunnerMoveMode::AutoMove:
+    	{
+    		// 자동 전진
+    		FVector MoveDelta =
+				GetActorForwardVector() * AutoForwardMoveSpeed * DeltaTime;
+
+    		AddActorWorldOffset(MoveDelta, true);
+
+    		// 레일 기준점도 같이 이동해야 원래 위치로 끌려가지 않습니다.
+    		LaneCenterLocation += MoveDelta;
+    		break;
+    	}
+
+    case ERunnerMoveMode::ManualMove:
+		// 수동 모드에서는 W/S 입력에서만 이동합니다.
+		break;
+	}
+
     FVector CurrentLocation = GetActorLocation();
     FVector TargetLocation = GetTargetLaneLocation();
 
@@ -113,6 +138,22 @@ void ASharedRailCharacter::Tick(float DeltaTime)
         );
 
     SpringArm->SetRelativeRotation(NewRot);
+
+	if (bDebugLaneCenterTracking)
+	{
+		DebugLaneCenterTrackingLogElapsed += DeltaTime;
+		if (DebugLaneCenterTrackingLogElapsed >= 1.0f)
+		{
+			DebugLaneCenterTrackingLogElapsed = 0.0f;
+			UE_LOG(LogTemp, Warning, TEXT("[FlyingEnemyTracking][SharedRail] Actor=%s ActorLocation=%s LaneCenterLocation=%s ActorForwardVector=%s CurrentLane=%d MoveMode=%d"),
+				*GetName(),
+				*GetActorLocation().ToString(),
+				*LaneCenterLocation.ToString(),
+				*GetActorForwardVector().ToString(),
+				CurrentLane,
+				static_cast<int32>(MoveMode));
+		}
+	}
 }
 
 FVector ASharedRailCharacter::GetTargetLaneLocation() const
@@ -438,13 +479,32 @@ void ASharedRailCharacter::GetLifetimeReplicatedProps(
     DOREPLIFETIME(ASharedRailCharacter, TargetCameraYaw);
 	DOREPLIFETIME(ASharedRailCharacter, LaneCenterLocation);
 	DOREPLIFETIME(ASharedRailCharacter, CurrentPlayerHP);
+	DOREPLIFETIME(ASharedRailCharacter, bIsInvincible); // 무적 상태 동기화 추가
 }
 
-void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser)
+FVector ASharedRailCharacter::GetLaneCenterLocation() const
+{
+	return LaneCenterLocation;
+}
+
+FTransform ASharedRailCharacter::GetLaneCenterTransform() const
+{
+	const FRotator LaneCenterRotation(0.0f, GetActorRotation().Yaw, 0.0f);
+	return FTransform(LaneCenterRotation, LaneCenterLocation);
+}
+
+void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser, bool bIgnoreInvincibility)
 {
 	//  예외 처리: 서버가 아니거나, 데미지가 없거나, 이미 죽은 상태면 로직을 무시
 	if (!HasAuthority() || Damage <= 0.f || bPlayerDeathHandled)
 	{
+		return;
+	}
+
+	// 무적 상태라면 데미지 무시
+	if (!bIgnoreInvincibility && bIsInvincible)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[SERVER] 1초 무적 상태"));
 		return;
 	}
 
@@ -461,6 +521,21 @@ void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser)
 	if (CurrentPlayerHP <= 0.f)
 	{
 		HandlePlayerDeath();
+	}
+	else
+	{
+		// 일반 장애물일 때만 무적 타이머를 부여합니다.
+		if (!bIgnoreInvincibility)
+		{
+			bIsInvincible = true;
+			GetWorldTimerManager().SetTimer(
+				InvincibilityTimerHandle,
+				this,
+				&ASharedRailCharacter::ResetInvincibility,
+				InvincibilityDuration,
+				false
+			);
+		}
 	}
 }
 
@@ -480,6 +555,12 @@ void ASharedRailCharacter::DebugMoveForward(float AxisValue)
 		return;
 	}
 
+	// 0706 수동 모드가 아니면 W/S 입력 무시
+	if (MoveMode != ERunnerMoveMode::ManualMove)
+	{
+		return;
+	}
+
 	if (FMath::IsNearlyZero(AxisValue))
 	{
 		return;
@@ -494,4 +575,26 @@ void ASharedRailCharacter::DebugMoveForward(float AxisValue)
 	// 중요:
 	// 레일 중앙 기준점도 같이 이동시켜야 Tick에서 원래 위치로 끌려가지 않음
 	LaneCenterLocation += MoveDelta;
+}
+
+// [한길] 0707 움직임 방식 변경 함수.
+void ASharedRailCharacter::SetMoveMode(ERunnerMoveMode NewMoveMode)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	MoveMode = NewMoveMode;
+
+	UE_LOG(LogTemp, Warning, TEXT("MoveMode Changed: %d"), static_cast<uint8>(MoveMode));
+}
+
+void ASharedRailCharacter::ResetInvincibility()
+{
+	if (HasAuthority())
+	{
+		bIsInvincible = false;
+		UE_LOG(LogTemp, Warning, TEXT("[SERVER] 무적 시간이 종료"));
+	}
 }

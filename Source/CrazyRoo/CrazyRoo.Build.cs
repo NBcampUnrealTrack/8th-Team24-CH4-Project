@@ -19,11 +19,14 @@ public class CrazyRoo : ModuleRules
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
-			"UMG"
-			//"OnlineSubsystem", // 주요 기능: 방 만들기(Create Session), 방 찾기(Find Session), 방 참가하기(Join Session), 친구 목록 불러오기, 업적 달성, 리더보드(랭킹) 등의 기능
-			//"OnlineSubsystemUtils" //OnlineSubsystem 편하게 쓰기 위한 기능
+			"UMG",
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
+			"OnlineSubsystemNull"
 		});
-
+		// OnlineSubsystem 주요 기능: 방 만들기(Create Session), 방 찾기(Find Session), 방 참가하기(Join Session), 친구 목록 불러오기, 업적 달성, 리더보드(랭킹) 등의 기능
+		// OnlineSubsystemUtils 주요 기능: OnlineSubsystem 편하게 쓰기 위한 기능
+		// OnlineSubsystemNull 주요 기능: 인터넷 연결 없이 랜(LAN) 환경에서 멀티플레이 방(Session)을 테스트하기 위한 가짜 온라인 서비스
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
 		PublicIncludePaths.AddRange(new string[] {

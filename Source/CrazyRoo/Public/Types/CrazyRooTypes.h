@@ -45,6 +45,34 @@ struct FCrazyRooStageInfo : public FTableRowBase
 };
 
 
+/** * 방 목록 UI 한 줄(Row)에 대응하는 정보 구조체
+ * (언리얼의 복잡한 SearchResults 데이터를 블루프린트 UI에서 쉽게 꺼내 쓸 수 있도록 가공한 형태)
+ */
+USTRUCT(BlueprintType)
+struct FCrazyRooRoomInfo
+{
+	GENERATED_BODY()
+
+	// 유저가 UI에서 [참가] 버튼을 눌렀을 때, JoinRoomByIndex 에 넘겨줄 고유 인덱스
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	int32 SearchResultIndex = -1;
+
+	// UI에 표시할 방 이름 (예: "CrazyRoo Room")
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	FString RoomName;
+
+	//현재 방에 들어와 있는 유저 수
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	int32 CurrentPlayers = 0;
+
+	// 방의 최대 수용 인원
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	int32 MaxPlayers = 0;
+
+	// 서버와의 통신 지연율(Ping)
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Session")
+	int32 PingMs = 0;
+};
 
 /** 3개 레인 중 현재 위치. */
 //UENUM(BlueprintType)

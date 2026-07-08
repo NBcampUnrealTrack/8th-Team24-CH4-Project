@@ -44,6 +44,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Spawn")
 	bool bSpawnedEnemiesFollowReference = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Spawn|Deprecated", meta = (AdvancedDisplay))
+	bool bUseSpawnerAsSlotReference = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Spawn", meta = (ClampMin = "1", ClampMax = "3"))
 	int32 MaxActiveEnemies = 3;
 
@@ -92,6 +95,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Spawn", meta = (EditCondition = "bUseRandomSeed"))
 	int32 RandomSeed = 24680;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Spawn|Debug")
+	bool bDebugEnemyTracking = false;
+
 	FRandomStream RandomStream;
 	FTimerHandle SpawnTimerHandle;
 	TArray<TWeakObjectPtr<AFlyingEnemy>> ActiveEnemies;
@@ -124,10 +130,13 @@ protected:
 	bool ChooseAvailableSlot(EFlyingEnemySlot& OutSlot);
 	bool IsSlotOccupied(EFlyingEnemySlot Slot) const;
 	FTransform GetReferenceTransform() const;
+	FTransform GetSlotReferenceTransform() const;
 	bool ResolveSpawnReference();
 	FVector GetSlotLocalOffset(EFlyingEnemySlot Slot) const;
 	FVector GetSpawnLocation(const FTransform& ReferenceTransform, EFlyingEnemySlot Slot) const;
 	FRotator GetLookAtReferenceRotation(const FVector& SpawnLocation, const FTransform& ReferenceTransform) const;
+	AActor* GetSlotReferenceActor() const;
+	USceneComponent* GetSlotReferenceComponent() const;
 	AActor* GetAttackTarget() const;
 	void RegisterSpawnedEnemy(AFlyingEnemy* Enemy);
 	void CleanActiveEnemies();

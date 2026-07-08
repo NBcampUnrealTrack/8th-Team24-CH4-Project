@@ -59,12 +59,15 @@ void ACrazyRooGameMode::PostLogin(APlayerController* NewPlayer)
 		const int32 Order = NextJoinOrder++;
 		PS->SetJoinOrder(Order);
 
+		// 첫 번째 접속자 = 방장 (방 생성 버튼으로 빈 서버에 처음 들어온 사람)
+		PS->SetIsHost(Order == 1);
+
 		if (GI)
 		{
 			GI->SavePlayerJoinOrder(PS->GetPlayerId(), Order);
 		}
 
-		// ★ 누가 몇 번째로 들어왔는지 명확히 로그
+		// 누가 몇 번째로 들어왔는지 명확히 로그
 		FCrazyRooDebug::Print(this, FString::Printf(TEXT("플레이어-%d 접속 완료"), Order), FColor::Green);
 	}
 
@@ -131,6 +134,38 @@ void ACrazyRooGameMode::InitGame(const FString& MapName, const FString& Options,
 // 플레이어가 방을 나갔을 때 실행됨
 void ACrazyRooGameMode::Logout(AController* Exiting)
 {
+	// 방장 승계: 나가는 사람이 방장이면 남은 인원 중 JoinOrder 최소자에게
+	if (ACrazyRooPlayerState* ExitingPS = Exiting ? Exiting->GetPlayerState<ACrazyRooPlayerState>() : nullptr)
+	{
+		if (ExitingPS->IsHost())
+		{
+			ACrazyRooPlayerState* NewHost = nullptr;
+			if (const AGameStateBase* GS = GetGameState<AGameStateBase>())
+			{
+				for (APlayerState* Raw : GS->PlayerArray)
+				{
+					ACrazyRooPlayerState* PS = Cast<ACrazyRooPlayerState>(Raw);
+					if (!PS || PS == ExitingPS)
+					{
+						continue; // 나가는 본인은 제외
+					}
+					if (!NewHost || PS->GetJoinOrder() < NewHost->GetJoinOrder())
+					{
+						NewHost = PS;
+					}
+				}
+			}
+
+			if (NewHost)
+			{
+				NewHost->SetIsHost(true);
+				FCrazyRooDebug::Print(this, FString::Printf(
+					TEXT("방장 승계 → 플레이어-%d"), NewHost->GetJoinOrder()), FColor::Cyan);
+			}
+		}
+	}
+	// 고민
+
 	// 누가 나갔는지 로그로 출력
 	const FString Msg = FString::Printf(TEXT("Logout: %s 나감"),Exiting ? *Exiting->GetName() : TEXT("null"));
 	FCrazyRooDebug::Print(this, Msg, FColor::Orange);
@@ -154,6 +189,7 @@ void ACrazyRooGameMode::HandleSeamlessTravelPlayer(AController*& C)
 		if (SavedOrder > 0)
 		{
 			PS->SetJoinOrder(SavedOrder);
+			PS->SetIsHost(SavedOrder == 1);   // 방장 복원 — 트래블마다 PlayerState가 새로 생겨 리셋되므로
 		}
 
 		// [기존 코드] 역할 복원
@@ -295,6 +331,37 @@ void ACrazyRooGameMode::InitPlayerForCurrentMap(AController* C)
 	//		}
 	//	}
 	//}
+}
+
+bool ACrazyRooGameMode::AreAllPlayersReady() const
+{
+	const AGameStateBase* GS = GetGameState<AGameStateBase>();
+	if (!GS)
+	{
+		return false;
+	}
+
+	// 인원 검사 — MinPlayersToStart 미만이면 시작 불가
+	if (GS->PlayerArray.Num() < MinPlayersToStart)
+	{
+		return false;
+	}
+
+	// 준비 검사 — 방장은 시작 버튼을 누르는 것 자체가 의사표시이므로 제외
+	for (APlayerState* Raw : GS->PlayerArray)
+	{
+		const ACrazyRooPlayerState* PS = Cast<ACrazyRooPlayerState>(Raw);
+		if (PS && !PS->IsHost() && !PS->IsReady())
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool ACrazyRooGameMode::IsDevSoloStart() const
+{
+	return bDevAllowSoloStart;
 }
 
 // 빈 역할을 찾아주는 함수입니다.
