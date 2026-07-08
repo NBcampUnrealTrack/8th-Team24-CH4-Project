@@ -22,6 +22,9 @@ void ACrazyRooPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ACrazyRooPlayerState, PlayerRole);
+
+	DOREPLIFETIME(ACrazyRooPlayerState, bIsHost);
+	DOREPLIFETIME(ACrazyRooPlayerState, bIsReady);
 }
 
 ECrazyRooPlayerRole ACrazyRooPlayerState::GetPlayerRole() const
@@ -60,6 +63,22 @@ void ACrazyRooPlayerState::SetJoinOrder(int32 InJoinOrder)
 	JoinOrder = InJoinOrder;
 }
 
+void ACrazyRooPlayerState::SetIsHost(bool bNew)
+{
+	if (HasAuthority())
+	{
+		bIsHost = bNew;
+	}
+}
+
+void ACrazyRooPlayerState::SetIsReady(bool bNew)
+{
+	if (HasAuthority())
+	{
+		bIsReady = bNew;
+	}
+}
+
 // [Client] 서버에서 역할 값이 바뀌어 내 컴퓨터로 전송되었을 때 자동 호출되는 함수
 void ACrazyRooPlayerState::OnRep_PlayerRole()
 {
@@ -69,4 +88,10 @@ void ACrazyRooPlayerState::OnRep_PlayerRole()
 	FCrazyRooDebug::Print(this, Msg, FColor::Yellow);
 
 	// (OnRoleChanged.Broadcast 등을 이용해 UI를 업데이트 할 수 있는 위치입니다)
+}
+
+void ACrazyRooPlayerState::OnRep_IsReady()
+{
+	// 클라이언트에서 준비 상태가 바뀌었을 때 실행됨 (UI 갱신용)
+	FCrazyRooDebug::Print(this, FString::Printf(TEXT("[CLIENT] 플레이어-%d 준비 상태 = %d"), JoinOrder, bIsReady), FColor::Yellow);
 }

@@ -41,6 +41,14 @@ public:
 	/** 게임플레이 맵에 플레이어가 진입했을 때 공통 세팅 (카메라 + 역할 폴백). 로비 맵이면 아무것도 안 함 */
 	void InitPlayerForCurrentMap(AController* C);
 
+
+	/** [Server] 시작 조건 검사: 최소 인원 충족 + (방장 제외) 전원 준비 */
+	bool AreAllPlayersReady() const;
+
+	/** 개발용 솔로 시작 허용 여부 (ServerTravel 가드가 참조) */
+	bool IsDevSoloStart() const;
+	// ★ [추가 끝] ────────────────────────────────────────────
+
 protected:
 
 	// 다음 비어있는 역할 반환 (없으면 None)
@@ -60,6 +68,17 @@ protected:
 	// protected에 추가
 	UPROPERTY()
 	ASharedCharacterManager* SharedCharacterManager = nullptr;
+
+
+	/** 시작에 필요한 최소 인원. 테스트 2 → 완성 시 BP Class Defaults에서 4로 변경 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "CrazyRoo")
+	int32 MinPlayersToStart = 2;
+
+	/** [Dev] true면 인원/준비 검사 생략 — 방장이 역할만 골랐으면 시작 가능.
+	 *  정식 규칙으로 전환할 땐 이 값만 false로 (BP Class Defaults에서 체크 해제) */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "CrazyRoo|Dev")
+	bool bDevAllowSoloStart = true;
+	// ★ [추가 끝] ────────────────────────────────────────────
 
 };
 

@@ -62,6 +62,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Lobby")
 	void RequestRole(ECrazyRooPlayerRole DesiredRole);
 
+	// 준비완료 버튼
+	UFUNCTION(BlueprintCallable, Category="CrazyRoo|Lobby")
+	void RequestReady(bool bReady);
+
 	// 위젯이 바인딩할 거부 이벤트 (BP AddDynamic)
 	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo|Lobby")
 	FOnCrazyRooRoleRejected OnRoleRejected;
@@ -87,6 +91,10 @@ protected:
 	// [Server] 내 컴퓨터가 서버한테 동작을 한다고 요청하는 함수입니다 (Reliable: 무조건 전송 보장)
 	UFUNCTION(Server, Reliable)
 	void ServerRequestRole(ECrazyRooPlayerRole DesiredRole);
+
+	// [Server] 클라이언트의 준비 상태 변경 요청을 받아 실제로 서버 측에서 실행되는 RPC 함수입
+	UFUNCTION(Server, Reliable)
+	void ServerSetReady(bool bReady);
 
 	UFUNCTION(Server, Reliable)
 	void ServerTravel(FName MapId);
