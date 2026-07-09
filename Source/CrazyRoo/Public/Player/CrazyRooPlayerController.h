@@ -70,9 +70,14 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo|Lobby")
 	FOnCrazyRooRoleRejected OnRoleRejected;
 
-	// "시작" 버튼이 호출. 어느 맵으로 갈지 MapId 로 지정
+	// 시작 버튼이 호출. 어느 맵으로 갈지 MapId 로 지정
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Lobby")
 	void RequestMap(FName MapId);
+	//
+
+	// UI(블루프린트)에서 캐러셀 인덱스 변경을 요청할 때 부르는 함수
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Lobby")
+	void RequestUpdateCarousel(int32 NewIndex);
 	//
 
 	//맵 이동 테스트 함수 삭졔 할 수도 있음
@@ -98,6 +103,10 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerTravel(FName MapId);
+
+	// 서버로 전송되는 실제 RPC 함수
+	UFUNCTION(Server, Reliable)
+	void Server_UpdateCarousel(int32 NewIndex);
 
 	// ── 공유 캐릭터 조작 (RailCoopPlayerController, 한길님 파트) ──
 

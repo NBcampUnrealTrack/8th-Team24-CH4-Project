@@ -23,6 +23,7 @@ void ACrazyRooGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ACrazyRooGameState, CurrentMapId);
+	DOREPLIFETIME(ACrazyRooGameState, CarouselIndex);
 }
 
 FName ACrazyRooGameState::GetCurrentMapId() const
@@ -52,4 +53,19 @@ void ACrazyRooGameState::OnRep_CurrentMapId()
 	FCrazyRooDebug::PrintSystem(this, FString::Printf(TEXT("OnRep_CurrentMapId = %s"), *CurrentMapId.ToString()), FColor::White);
 
 	OnCurrentMapChanged.Broadcast(CurrentMapId);
+}
+void ACrazyRooGameState::SetCarouselIndex(int32 NewIndex)
+{
+	if (HasAuthority() && CarouselIndex != NewIndex)
+	{
+		CarouselIndex = NewIndex;
+		// 서버 자신도 UI를 업데이트해야 하므로 브로드캐스트
+		OnCarouselIndexChanged.Broadcast(CarouselIndex);
+	}
+}
+
+void ACrazyRooGameState::OnRep_CarouselIndex()
+{
+	// 클라이언트 UI 업데이트를 위해 브로드캐스트
+	OnCarouselIndexChanged.Broadcast(CarouselIndex);
 }

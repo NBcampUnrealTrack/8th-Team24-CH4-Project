@@ -14,6 +14,8 @@ enum class ECrazyRooStageState : uint8;
 
 // UI 가 바인딩할 델리게이트 — MatchState 가 바뀌면 알림
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooMapChanged, FName, NewMapId);
+// UI 캐러셀 인덱스 동기화용 델리게이트 추가
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooCarouselIndexChanged, int32, NewIndex);
 
 UCLASS()
 class CRAZYROO_API ACrazyRooGameState : public AGameStateBase
@@ -35,11 +37,25 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo")
 	FOnCrazyRooMapChanged OnCurrentMapChanged;
 
+	// 블루프린트에서 바인딩할 캐러셀 이벤트
+	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo")
+	FOnCrazyRooCarouselIndexChanged OnCarouselIndexChanged;
+
+	// 서버가 캐러셀 인덱스를 바꿀 때 쓰는 함수
+	void SetCarouselIndex(int32 NewIndex);
+
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentMapId)
 	FName CurrentMapId;
 
 	UFUNCTION()
 	void OnRep_CurrentMapId();
+
+	// 리플리케이트 되는 맵 캐러셀 인덱스 변수
+	UPROPERTY(ReplicatedUsing = OnRep_CarouselIndex)
+	int32 CarouselIndex = 0;
+
+	UFUNCTION()
+	void OnRep_CarouselIndex();
 
 };

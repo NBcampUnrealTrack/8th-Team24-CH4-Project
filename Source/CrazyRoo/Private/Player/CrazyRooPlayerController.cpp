@@ -9,6 +9,7 @@
 #include "Blueprint/UserWidget.h"
 #include "CrazyRoo.h"
 #include "System/CrazyRooGameMode.h"
+#include "System/CrazyRooGameState.h"
 #include "Player/CrazyRooPlayerState.h"
 #include "Types/CrazyRooTypes.h"
 #include "Widgets/Input/SVirtualJoystick.h"
@@ -171,6 +172,11 @@ void ACrazyRooPlayerController::RequestMap(FName MapId)
 	ServerTravel(MapId);
 }
 
+void ACrazyRooPlayerController::RequestUpdateCarousel(int32 NewIndex)
+{
+	Server_UpdateCarousel(NewIndex);
+}
+
 void ACrazyRooPlayerController::Client_SetupGameplayCamera_Implementation()
 {
 	// 데이터 테이블에서 게임 맵이라고 받아오면 공유 캐릭터로 카메라 전환
@@ -284,6 +290,22 @@ void ACrazyRooPlayerController::ServerSetReady_Implementation(bool bReady)
 		// 조건을 통과했다면 PlayerState의 레디 상태를 업데이트합니다.
 		// (bIsReady 변수는 Replicated 처리되어 있으므로 알아서 모든 클라이언트 화면에 갱신됩니다)
 		PS->SetIsReady(bReady);
+	}
+}
+
+void ACrazyRooPlayerController::Server_UpdateCarousel_Implementation(int32 NewIndex)
+{
+	// 요청한 사람이 방장인지 확인 (아무나 맵을 바꾸면 안 되니까!)
+	if (ACrazyRooPlayerState* PS = GetPlayerState<ACrazyRooPlayerState>())
+	{
+		if (PS->IsHost())
+		{
+			// 방장이 맞으면 GameState의 인덱스를 바꿈
+			if (ACrazyRooGameState* GS = GetWorld()->GetGameState<ACrazyRooGameState>())
+			{
+				GS->SetCarouselIndex(NewIndex);
+			}
+		}
 	}
 }
 
