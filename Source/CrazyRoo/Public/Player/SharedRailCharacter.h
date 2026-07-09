@@ -58,7 +58,7 @@ public:
 
 	// 총 사거리
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shooting")
-	float FireRange = 5000.f;
+	float FireRange = 800.f;
 
 	// 총 데미지
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shooting")
