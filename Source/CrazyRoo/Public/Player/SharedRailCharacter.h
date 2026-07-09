@@ -125,6 +125,9 @@ public:
 	// 예) 좌회전 : -90°, 우회전 : +90°
 	void ApplyCornerTurn(float YawDelta);
 
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void ApplyCornerTurnAtSnapPoint(float YawDelta, const FTransform& SnapTransform);
+
 	// [한길] 0703 테스트용 앞뒤 움직임. 0706 자동 전진 / 수동 전진 구분.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	ERunnerMoveMode MoveMode = ERunnerMoveMode::AutoMove;
@@ -135,6 +138,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Debug")
 	float DebugMoveSpeed = 600.f;
 	void DebugMoveForward(float AxisValue);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Cornering", meta = (ClampMin = "0.0", Units = "s"))
+	float CornerSnapDuration = 0.2f;
 
 	// [한길] 0707 MoveMode 변경 함수.
 	UFUNCTION(BlueprintCallable, Category = "Movement")
@@ -183,10 +189,18 @@ protected:
 	UPROPERTY(Replicated)
 	float TargetCameraYaw = 0.f;
 
+	bool bIsCornerSnapInterpolating = false;
+	float CornerSnapElapsedTime = 0.0f;
+	FVector CornerSnapStartLocation = FVector::ZeroVector;
+	FVector CornerSnapTargetLocation = FVector::ZeroVector;
+	float PendingCornerYawDelta = 0.0f;
+
 	// 중앙 레일의 기준 위치
 	// 캐릭터가 회전하거나 갈림길을 통과할 때 갱신됨
 	UPROPERTY(Replicated)
 	FVector LaneCenterLocation;
+
+	void FinishCornerSnapTurn();
 
 	/** [Server] HP 0 도달 시 1회 실행. 지금은 로그만, 나중에 게임오버 연결 지점 */
 	void HandlePlayerDeath();

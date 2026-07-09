@@ -88,6 +88,20 @@ void ASharedRailCharacter::Tick(float DeltaTime)
         return;
     }
 
+	if (bIsCornerSnapInterpolating)
+	{
+		CornerSnapElapsedTime += DeltaTime;
+		const float Alpha = CornerSnapDuration > 0.0f ? FMath::Clamp(CornerSnapElapsedTime / CornerSnapDuration, 0.0f, 1.0f) : 1.0f;
+		const FVector NewLocation = FMath::Lerp(CornerSnapStartLocation, CornerSnapTargetLocation, Alpha);
+		SetActorLocation(NewLocation, false);
+
+		if (Alpha >= 1.0f)
+		{
+			FinishCornerSnapTurn();
+		}
+		return;
+	}
+
 	// [한길] 0707 이동 모드에 따라 전진 방식 결정
 	switch (MoveMode)
 	{
@@ -466,6 +480,66 @@ void ASharedRailCharacter::ApplyCornerTurn(float YawDelta)
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Corner Turn Applied Character Only : %f"), YawDelta);
+}
+
+void ASharedRailCharacter::ApplyCornerTurnAtSnapPoint(float YawDelta, const FTransform& SnapTransform)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	FVector SnapLocation = SnapTransform.GetLocation();
+	SnapLocation.Z = GetActorLocation().Z;
+	PendingCornerYawDelta = YawDelta;
+	CornerSnapTargetLocation = SnapLocation;
+
+	if (CornerSnapDuration <= 0.0f || (GetActorLocation() - SnapLocation).IsNearlyZero(1.0f))
+	{
+		FinishCornerSnapTurn();
+		return;
+	}
+
+	bIsCornerSnapInterpolating = true;
+	CornerSnapElapsedTime = 0.0f;
+	CornerSnapStartLocation = GetActorLocation();
+
+	UE_LOG(LogTemp, Warning, TEXT("Corner Snap Interpolation Started : %f / TargetLocation: %s"), YawDelta, *SnapLocation.ToString());
+}
+
+void ASharedRailCharacter::FinishCornerSnapTurn()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bIsCornerSnapInterpolating = false;
+	SetActorLocation(CornerSnapTargetLocation, false);
+
+	CurrentLane = 1;
+	LaneCenterLocation = CornerSnapTargetLocation;
+
+	FRotator SavedSpringArmWorldRotation = FRotator::ZeroRotator;
+	if (SpringArm)
+	{
+		SavedSpringArmWorldRotation = SpringArm->GetComponentRotation();
+	}
+
+	FRotator NewRotation = GetActorRotation();
+	NewRotation.Yaw += PendingCornerYawDelta;
+	SetActorRotation(NewRotation);
+
+	if (SpringArm)
+	{
+		SpringArm->SetWorldRotation(SavedSpringArmWorldRotation);
+		TargetCameraYaw = SpringArm->GetRelativeRotation().Yaw;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Corner Turn Applied At SnapPoint : %f / SnapLocation: %s"), PendingCornerYawDelta, *CornerSnapTargetLocation.ToString());
+
+	PendingCornerYawDelta = 0.0f;
+	CornerSnapElapsedTime = 0.0f;
 }
 
 void ASharedRailCharacter::GetLifetimeReplicatedProps(
