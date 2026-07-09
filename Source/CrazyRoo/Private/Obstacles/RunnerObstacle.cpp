@@ -58,6 +58,25 @@ void ARunnerObstacle::BeginPlay()
 	CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ARunnerObstacle::HandleCollisionBeginOverlap);
 }
 
+void ARunnerObstacle::Multicast_PlayDestruction_Implementation()
+{
+	// 기본 메쉬 돌 숨기기
+	if (MeshComponent)
+	{
+		MeshComponent->SetVisibility(false);
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	// 조각내기는 BP에서
+	BP_PlayDestruction();
+}
+
+void ARunnerObstacle::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	//UE_LOG(LogTemp, Error, TEXT("[사망] EndPlay 실제 파괴됨! Reason=%d"), (int32)EndPlayReason);
+	Super::EndPlay(EndPlayReason);
+}
+
 void ARunnerObstacle::InitializeObstacle(ERunnerObstacleActionType InActionType, ERunnerLaneCoverage InLaneCoverage, ERunnerLane InLane)
 {
 	if (!HasAuthority())
@@ -126,6 +145,7 @@ void ARunnerObstacle::HandleDeath()
 {
 	if (bDeathHandled)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("[사망] 이미 처리됨 - 리턴"));
 		return;
 	}
 
@@ -137,14 +157,18 @@ void ARunnerObstacle::HandleDeath()
 		CollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
+	//UE_LOG(LogTemp, Warning, TEXT("[사망] DestroyDelayAfterDeath = %f"), DestroyDelayAfterDeath);
+
+	Multicast_PlayDestruction();
 	OnObstacleDestroyed.Broadcast(this);
 
 	if (DestroyDelayAfterDeath <= 0.0f)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("[사망] 즉시 Destroy 경로 진입!!"));
 		Destroy();
 		return;
 	}
-
+	//UE_LOG(LogTemp, Warning, TEXT("[사망] SetLifeSpan(%f) 호출"), DestroyDelayAfterDeath);
 	SetLifeSpan(DestroyDelayAfterDeath);
 }
 

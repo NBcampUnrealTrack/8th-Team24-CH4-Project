@@ -68,6 +68,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Collision")
 	bool bBlockVisibilityWhenShootRequired = true;
 
+	// 서버 + 모든 클라에서 파괴 연출 실행
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayDestruction();
+
+	// 실제 조각내기는 BP에서 구현
+	UFUNCTION(BlueprintImplementableEvent, Category = "Obstacle|Death")
+	void BP_PlayDestruction();
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Obstacle|Events")
 	FRunnerObstaclePlayerOverlapSignature OnPlayerHitObstacle;
