@@ -54,6 +54,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Damage", meta = (ClampMin = "0.0"))
 	float ObstacleDamage = 1.0f;
 
+	// HP가 0이 된 뒤 실제 Destroy까지 기다릴 시간
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Death", meta = (ClampMin = "0.0", Units = "s"))
+	float DestroyDelayAfterDeath = 1.0f;
+
+	// 파괴 처리 시작 시 충돌 판정 on/off
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Death")
+	bool bDisableCollisionOnDeath = true;
+
+	// 파괴 처리 중복 방지
+	bool bDeathHandled = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Collision")
 	bool bBlockVisibilityWhenShootRequired = true;
 

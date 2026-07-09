@@ -52,6 +52,8 @@ void ARunnerObstacle::BeginPlay()
 	}
 
 	CurrentHP = MaxHP;
+	bDeathHandled = false;
+
 	RefreshCollisionResponses();
 	CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ARunnerObstacle::HandleCollisionBeginOverlap);
 }
@@ -67,6 +69,8 @@ void ARunnerObstacle::InitializeObstacle(ERunnerObstacleActionType InActionType,
 	LaneCoverage = InLaneCoverage;
 	Lane = InLaneCoverage == ERunnerLaneCoverage::AllLanes ? ERunnerLane::All : InLane;
 	CurrentHP = MaxHP;
+	bDeathHandled = false;
+
 	RefreshCollisionResponses();
 }
 
@@ -104,7 +108,7 @@ void ARunnerObstacle::ApplyDamage(float Damage, AActor* DamageCauser, const FVec
 		return;
 	}
 
-	if (Damage <= 0.0f || !IsShootRequiredObstacle() || CurrentHP <= 0.0f)
+	if (Damage <= 0.0f || !IsShootRequiredObstacle() || CurrentHP <= 0.0f || bDeathHandled)
 	{
 		return;
 	}
@@ -120,8 +124,28 @@ void ARunnerObstacle::ApplyDamage(float Damage, AActor* DamageCauser, const FVec
 
 void ARunnerObstacle::HandleDeath()
 {
+	if (bDeathHandled)
+	{
+		return;
+	}
+
+	bDeathHandled = true;
+
+	if (bDisableCollisionOnDeath && CollisionBox)
+	{
+		CollisionBox->SetGenerateOverlapEvents(false);
+		CollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
 	OnObstacleDestroyed.Broadcast(this);
-	Destroy();
+
+	if (DestroyDelayAfterDeath <= 0.0f)
+	{
+		Destroy();
+		return;
+	}
+
+	SetLifeSpan(DestroyDelayAfterDeath);
 }
 
 void ARunnerObstacle::ApplyHealing(float Healing, AActor* Healer)
