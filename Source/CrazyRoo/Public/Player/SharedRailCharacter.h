@@ -41,7 +41,7 @@ public:
 
 	// 레일 간격
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Rail")
-	float LaneDistance = 550.f;
+	float LaneDistance = 450.f;
 
 	// 레일 변경 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Rail")
