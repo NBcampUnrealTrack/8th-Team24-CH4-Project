@@ -6,6 +6,8 @@
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DamageEvents.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "GameFramework/Pawn.h"
 
 ARunnerObstacle::ARunnerObstacle()
@@ -145,7 +147,6 @@ void ARunnerObstacle::HandleDeath()
 {
 	if (bDeathHandled)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("[사망] 이미 처리됨 - 리턴"));
 		return;
 	}
 
@@ -157,18 +158,20 @@ void ARunnerObstacle::HandleDeath()
 		CollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
-	//UE_LOG(LogTemp, Warning, TEXT("[사망] DestroyDelayAfterDeath = %f"), DestroyDelayAfterDeath);
-
+	// 서버 + 모든 클라이언트에서 메쉬 숨김 / BP 파괴 연출 실행
 	Multicast_PlayDestruction();
+
+	// 서버 + 모든 클라이언트에서 파괴 사운드 즉시 재생
+	MulticastPlayDestroySound(GetActorLocation());
+
 	OnObstacleDestroyed.Broadcast(this);
 
 	if (DestroyDelayAfterDeath <= 0.0f)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("[사망] 즉시 Destroy 경로 진입!!"));
 		Destroy();
 		return;
 	}
-	//UE_LOG(LogTemp, Warning, TEXT("[사망] SetLifeSpan(%f) 호출"), DestroyDelayAfterDeath);
+
 	SetLifeSpan(DestroyDelayAfterDeath);
 }
 
@@ -211,4 +214,20 @@ void ARunnerObstacle::RefreshCollisionResponses()
 	CollisionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	CollisionBox->SetCollisionResponseToChannel(ECC_Visibility, IsShootRequiredObstacle() && bBlockVisibilityWhenShootRequired ? ECR_Block : ECR_Ignore);
 	CollisionBox->SetGenerateOverlapEvents(true);
+}
+
+void ARunnerObstacle::MulticastPlayDestroySound_Implementation(FVector SoundLocation)
+{
+	if (!DestroySound)
+	{
+		return;
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(
+		this,
+		DestroySound,
+		SoundLocation,
+		DestroySoundVolume,
+		DestroySoundPitch
+	);
 }

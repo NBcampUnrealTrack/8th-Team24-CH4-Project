@@ -12,6 +12,7 @@ class UBoxComponent;
 class USceneComponent;
 class UStaticMeshComponent;
 class ARunnerObstacle;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FRunnerObstaclePlayerOverlapSignature, ARunnerObstacle*, Obstacle, AActor*, PlayerActor, ERunnerObstacleActionType, ActionType, ERunnerLaneCoverage, LaneCoverage, ERunnerLane, Lane);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FRunnerObstacleDamageSignature, ARunnerObstacle*, Obstacle, float, Damage, float, CurrentHP, AActor*, DamageCauser);
@@ -57,6 +58,15 @@ protected:
 	// HP가 0이 된 뒤 실제 Destroy까지 기다릴 시간
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Death", meta = (ClampMin = "0.0", Units = "s"))
 	float DestroyDelayAfterDeath = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Obstacle|Death")
+	TObjectPtr<USoundBase> DestroySound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Obstacle|Death", meta = (ClampMin = "0.0"))
+	float DestroySoundVolume = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Obstacle|Death", meta = (ClampMin = "0.0"))
+	float DestroySoundPitch = 1.0f;
 
 	// 파괴 처리 시작 시 충돌 판정 on/off
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle|Death")
@@ -113,6 +123,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Obstacle")
 	bool IsPlayerActor(AActor* Actor) const;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayDestroySound(FVector SoundLocation);
 
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
