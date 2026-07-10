@@ -336,11 +336,12 @@ bool ASharedCharacterManager::TryHandleTurnInput(ERunnerTurnInputDirection Input
 		const float YawDelta =
 			TurnBox->GetRecommendedYawDeltaForInput(
 				InputDirection);
+		const FTransform SnapTransform = TurnBox->GetTurnSnapTransform();
 
 		StopFlyingEnemiesForRunnerTurn();
 
 		// 캐릭터를 회전시킵니다.
-		SharedCharacter->ApplyCornerTurn(YawDelta);
+		SharedCharacter->ApplyCornerTurnAtSnapPoint(YawDelta, SnapTransform);
 
 		UE_LOG(LogTemp, Warning, TEXT("Turn Succeeded"));
 	}

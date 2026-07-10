@@ -52,8 +52,29 @@ void ARunnerObstacle::BeginPlay()
 	}
 
 	CurrentHP = MaxHP;
+	bDeathHandled = false;
+
 	RefreshCollisionResponses();
 	CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &ARunnerObstacle::HandleCollisionBeginOverlap);
+}
+
+void ARunnerObstacle::Multicast_PlayDestruction_Implementation()
+{
+	// 기본 메쉬 돌 숨기기
+	if (MeshComponent)
+	{
+		MeshComponent->SetVisibility(false);
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	// 조각내기는 BP에서
+	BP_PlayDestruction();
+}
+
+void ARunnerObstacle::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	//UE_LOG(LogTemp, Error, TEXT("[사망] EndPlay 실제 파괴됨! Reason=%d"), (int32)EndPlayReason);
+	Super::EndPlay(EndPlayReason);
 }
 
 void ARunnerObstacle::InitializeObstacle(ERunnerObstacleActionType InActionType, ERunnerLaneCoverage InLaneCoverage, ERunnerLane InLane)
@@ -67,6 +88,8 @@ void ARunnerObstacle::InitializeObstacle(ERunnerObstacleActionType InActionType,
 	LaneCoverage = InLaneCoverage;
 	Lane = InLaneCoverage == ERunnerLaneCoverage::AllLanes ? ERunnerLane::All : InLane;
 	CurrentHP = MaxHP;
+	bDeathHandled = false;
+
 	RefreshCollisionResponses();
 }
 
@@ -104,7 +127,7 @@ void ARunnerObstacle::ApplyDamage(float Damage, AActor* DamageCauser, const FVec
 		return;
 	}
 
-	if (Damage <= 0.0f || !IsShootRequiredObstacle() || CurrentHP <= 0.0f)
+	if (Damage <= 0.0f || !IsShootRequiredObstacle() || CurrentHP <= 0.0f || bDeathHandled)
 	{
 		return;
 	}
@@ -120,8 +143,33 @@ void ARunnerObstacle::ApplyDamage(float Damage, AActor* DamageCauser, const FVec
 
 void ARunnerObstacle::HandleDeath()
 {
+	if (bDeathHandled)
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("[사망] 이미 처리됨 - 리턴"));
+		return;
+	}
+
+	bDeathHandled = true;
+
+	if (bDisableCollisionOnDeath && CollisionBox)
+	{
+		CollisionBox->SetGenerateOverlapEvents(false);
+		CollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	//UE_LOG(LogTemp, Warning, TEXT("[사망] DestroyDelayAfterDeath = %f"), DestroyDelayAfterDeath);
+
+	Multicast_PlayDestruction();
 	OnObstacleDestroyed.Broadcast(this);
-	Destroy();
+
+	if (DestroyDelayAfterDeath <= 0.0f)
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("[사망] 즉시 Destroy 경로 진입!!"));
+		Destroy();
+		return;
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("[사망] SetLifeSpan(%f) 호출"), DestroyDelayAfterDeath);
+	SetLifeSpan(DestroyDelayAfterDeath);
 }
 
 void ARunnerObstacle::ApplyHealing(float Healing, AActor* Healer)

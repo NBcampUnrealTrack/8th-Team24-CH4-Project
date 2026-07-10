@@ -29,6 +29,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* JudgeBox;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Turn Judge", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* TurnSnapPoint;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turn Judge")
 	ERunnerTurnDirection CornerDirection = ERunnerTurnDirection::LeftTurn;
 
@@ -37,6 +40,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turn Judge", meta = (ClampMin = "0.0", Units = "s"))
 	float MaxValidTime = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turn Judge")
+	bool bResolveOnlyOnce = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Turn Judge")
+	bool bHasResolvedTurn = false;
 
 	TMap<TWeakObjectPtr<AActor>, float> ActivePlayers;
 
@@ -73,6 +82,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Turn Judge")
 	FRotator GetRecommendedYawRotation() const;
+
+	UFUNCTION(BlueprintPure, Category = "Turn Judge")
+	FTransform GetTurnSnapTransform() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Turn Judge")
+	void ResetTurnResolved();
 
 	UFUNCTION(BlueprintPure, Category = "Turn Judge")
 	bool IsPlayerActor(AActor* Actor) const;

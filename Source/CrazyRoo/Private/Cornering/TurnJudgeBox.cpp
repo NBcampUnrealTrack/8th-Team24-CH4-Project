@@ -21,6 +21,10 @@ ATurnJudgeBox::ATurnJudgeBox()
 	JudgeBox->SetCollisionResponseToAllChannels(ECR_Ignore);
 	JudgeBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	JudgeBox->SetGenerateOverlapEvents(true);
+
+	TurnSnapPoint = CreateDefaultSubobject<USceneComponent>(TEXT("TurnSnapPoint"));
+	TurnSnapPoint->SetupAttachment(SceneRoot);
+	TurnSnapPoint->SetRelativeLocation(FVector::ZeroVector);
 }
 
 void ATurnJudgeBox::BeginPlay()
@@ -38,6 +42,11 @@ bool ATurnJudgeBox::TryResolveTurn(AActor* PlayerActor, ERunnerTurnInputDirectio
 		return false;
 	}
 
+	if (bResolveOnlyOnce && bHasResolvedTurn)
+	{
+		return false;
+	}
+
 	const float* EnterTime = ActivePlayers.Find(TWeakObjectPtr<AActor>(PlayerActor));
 	if (EnterTime && MaxValidTime > 0.0f && GetWorld() && GetWorld()->GetTimeSeconds() - *EnterTime > MaxValidTime)
 	{
@@ -49,6 +58,7 @@ bool ATurnJudgeBox::TryResolveTurn(AActor* PlayerActor, ERunnerTurnInputDirectio
 	const bool bSuccess = IsInputValidForCorner(InputDirection);
 	if (bSuccess)
 	{
+		bHasResolvedTurn = true;
 		OnTurnSucceeded.Broadcast(this, PlayerActor, CornerDirection, InputDirection);
 	}
 	else
@@ -88,6 +98,16 @@ float ATurnJudgeBox::GetRecommendedYawDeltaForInput(ERunnerTurnInputDirection In
 FRotator ATurnJudgeBox::GetRecommendedYawRotation() const
 {
 	return FRotator(0.0f, GetRecommendedYawDelta(), 0.0f);
+}
+
+FTransform ATurnJudgeBox::GetTurnSnapTransform() const
+{
+	return TurnSnapPoint ? TurnSnapPoint->GetComponentTransform() : GetActorTransform();
+}
+
+void ATurnJudgeBox::ResetTurnResolved()
+{
+	bHasResolvedTurn = false;
 }
 
 bool ATurnJudgeBox::IsPlayerActor(AActor* Actor) const
