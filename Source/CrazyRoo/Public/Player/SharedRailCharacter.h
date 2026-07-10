@@ -133,7 +133,7 @@ public:
 	ERunnerMoveMode MoveMode = ERunnerMoveMode::AutoMove;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Auto")
-	float AutoForwardMoveSpeed = 600.f;
+	float AutoForwardMoveSpeed = 1800.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Debug")
 	float DebugMoveSpeed = 600.f;
