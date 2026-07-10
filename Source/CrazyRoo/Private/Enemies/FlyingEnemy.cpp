@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "Enemies/FlyingEnemy.h"
 
@@ -9,6 +9,10 @@
 #include "Engine/DamageEvents.h"
 #include "GameFramework/Pawn.h"
 #include "Player/SharedRailCharacter.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "TimerManager.h"
 
 AFlyingEnemy::AFlyingEnemy()
@@ -355,6 +359,8 @@ void AFlyingEnemy::ApplyDamage(float Damage, AActor* DamageCauser, const FVector
 	CurrentHP = FMath::Max(0.0f, CurrentHP - Damage);
 	OnFlyingEnemyDamaged.Broadcast(this, Damage, CurrentHP, DamageCauser);
 
+	MulticastPlayHitEffect(DamageLocation);
+
 	if (CurrentHP <= 0.0f)
 	{
 		HandleDeath();
@@ -530,4 +536,29 @@ FVector AFlyingEnemy::ResolveMoveDirection() const
 	}
 
 	return MoveDirection.GetSafeNormal();
+}
+
+void AFlyingEnemy::MulticastPlayHitEffect_Implementation(FVector EffectLocation)
+{
+	if (HitEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			HitEffect,
+			EffectLocation,
+			GetActorRotation(),
+			HitEffectScale
+		);
+	}
+
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			HitSound,
+			EffectLocation,
+			HitSoundVolume,
+			HitSoundPitch
+		);
+	}
 }

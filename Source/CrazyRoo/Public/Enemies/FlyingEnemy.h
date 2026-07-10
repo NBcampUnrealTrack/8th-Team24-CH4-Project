@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #pragma once
 
@@ -13,6 +13,8 @@ class USceneComponent;
 class USkeletalMeshComponent;
 class UStaticMeshComponent;
 class AFlyingEnemy;
+class UNiagaraSystem;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FFlyingEnemyDamageSignature, AFlyingEnemy*, Enemy, float, Damage, float, CurrentHP, AActor*, DamageCauser);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FFlyingEnemyDestroyedSignature, AFlyingEnemy*, Enemy);
@@ -100,6 +102,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Debug")
 	bool bDebugEnemyTracking = false;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects")
+	TObjectPtr<UNiagaraSystem> HitEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects")
+	FVector HitEffectScale = FVector(1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects")
+	TObjectPtr<USoundBase> HitSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects", meta = (ClampMin = "0.0"))
+	float HitSoundVolume = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects", meta = (ClampMin = "0.0"))
+	float HitSoundPitch = 1.0f;
+
 	FTimerHandle LifetimeTimerHandle;
 	FTimerHandle AttackTimerHandle;
 	FTimerHandle DeferredDestroyTimerHandle;
@@ -163,6 +180,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Enemy")
 	bool IsPlayerActor(AActor* Actor) const;
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayHitEffect(FVector EffectLocation);
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
