@@ -205,6 +205,10 @@ protected:
 	/** [Server] HP 0 도달 시 1회 실행. 지금은 로그만, 나중에 게임오버 연결 지점 */
 	void HandlePlayerDeath();
 
+	/** [Server→All] 사망 사실을 모든 클라 화면에 표시 */
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_NotifyPlayerDeath();
+
 	// 사망 처리 중복 방지
 	bool bPlayerDeathHandled = false;
 	float DebugLaneCenterTrackingLogElapsed = 0.0f;

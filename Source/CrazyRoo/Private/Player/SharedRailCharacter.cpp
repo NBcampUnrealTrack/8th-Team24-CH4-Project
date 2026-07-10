@@ -10,6 +10,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "CrazyRoo.h"
 
 ASharedRailCharacter::ASharedRailCharacter()
 {
@@ -618,7 +619,14 @@ void ASharedRailCharacter::HandlePlayerDeath()
 	bPlayerDeathHandled = true;   // 이후 피격/중복 사망 차단
 
 	UE_LOG(LogTemp, Error, TEXT("[SERVER] 플레이어 사망"));
+	Multicast_NotifyPlayerDeath();
 	// TODO: 이후 GameMode에 게임오버 알림 (결과 맵 이동 등)
+}
+
+void ASharedRailCharacter::Multicast_NotifyPlayerDeath_Implementation()
+{
+	// 서버 + 모든 클라이언트 화면에서 실행됨
+	FCrazyRooDebug::PrintSystem(this, TEXT("플레이어 사망!"), FColor::Red, 10.0f);
 }
 
 //[한길] 0703 테스트용 앞뒤 움직임.
