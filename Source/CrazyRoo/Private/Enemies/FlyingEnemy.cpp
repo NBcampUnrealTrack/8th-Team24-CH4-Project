@@ -414,6 +414,8 @@ void AFlyingEnemy::TriggerAttackHitPlayer()
 		return;
 	}
 
+	MulticastPlayAttackSound(GetActorLocation());
+
 	OnFlyingEnemyAttackHitPlayer.Broadcast(this, TargetPlayer, AttackDamage);
 }
 
@@ -561,4 +563,20 @@ void AFlyingEnemy::MulticastPlayHitEffect_Implementation(FVector EffectLocation)
 			HitSoundPitch
 		);
 	}
+}
+
+void AFlyingEnemy::MulticastPlayAttackSound_Implementation(FVector SoundLocation)
+{
+	if (!AttackSound)
+	{
+		return;
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(
+		this,
+		AttackSound,
+		SoundLocation,
+		AttackSoundVolume,
+		AttackSoundPitch
+	);
 }

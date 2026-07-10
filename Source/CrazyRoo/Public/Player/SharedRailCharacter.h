@@ -129,11 +129,11 @@ public:
 	void ApplyCornerTurnAtSnapPoint(float YawDelta, const FTransform& SnapTransform);
 
 	// [한길] 0703 테스트용 앞뒤 움직임. 0706 자동 전진 / 수동 전진 구분.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
-	ERunnerMoveMode MoveMode = ERunnerMoveMode::AutoMove;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Replicated, Category="Movement")
+	ERunnerMoveMode MoveMode = ERunnerMoveMode::Stop;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Auto")
-	float AutoForwardMoveSpeed = 1800.f;
+	float AutoForwardMoveSpeed = 1400.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Debug")
 	float DebugMoveSpeed = 600.f;

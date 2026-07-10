@@ -11,6 +11,7 @@
 #include "Enemies/FlyingEnemy.h"
 #include "Obstacles/RunnerObstacleSpawner.h"
 #include "Obstacles/RunnerObstacle.h"
+#include "TimerManager.h"
 
 ASharedCharacterManager::ASharedCharacterManager()
 {
@@ -99,6 +100,9 @@ void ASharedCharacterManager::InitializeSharedCharacter()
     {
 		UE_LOG(LogTemp,Error,TEXT("Manager could not find SharedCharacter"));
     }
+
+	// 공유 캐릭터를 찾은 뒤 5초 카운트다운을 시작합니다.
+	StartAutoMoveAfterDelay();
 }
 
 void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
@@ -451,4 +455,48 @@ void ASharedCharacterManager::StartManualMove()
 void ASharedCharacterManager::StopMove()
 {
 	SetSharedCharacterMoveMode(ERunnerMoveMode::Stop);
+}
+
+void ASharedCharacterManager::StartAutoMoveAfterDelay()
+{
+	// 자동 이동 시작 여부는 서버가 결정합니다.
+	if (!HasAuthority() || !SharedCharacter)
+	{
+		return;
+	}
+
+	// 시작 전에 캐릭터를 확실히 정지 상태로 설정합니다.
+	SharedCharacter->SetMoveMode(ERunnerMoveMode::Stop);
+
+	// 이전 타이머가 남아 있다면 제거하여 중복 실행을 방지합니다.
+	GetWorldTimerManager().ClearTimer(AutoMoveStartTimerHandle);
+
+	// AutoMoveStartDelay초 뒤 HandleAutoMoveStart를 한 번 호출합니다.
+	GetWorldTimerManager().SetTimer(
+		AutoMoveStartTimerHandle,
+		this,
+		&ASharedCharacterManager::HandleAutoMoveStart,
+		AutoMoveStartDelay,
+		false
+	);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("AutoMove will start after %.1f seconds."),
+		AutoMoveStartDelay
+	);
+}
+
+void ASharedCharacterManager::HandleAutoMoveStart()
+{
+	if (!HasAuthority() || !SharedCharacter)
+	{
+		return;
+	}
+
+	// 대기 시간이 끝났으므로 자동 이동을 시작합니다.
+	SharedCharacter->SetMoveMode(ERunnerMoveMode::AutoMove);
+
+	UE_LOG(LogTemp, Warning, TEXT("AutoMove Started"));
 }

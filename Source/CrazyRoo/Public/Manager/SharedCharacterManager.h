@@ -90,7 +90,7 @@ protected:
 public:
 	// 테스트 목적으로 생성. true면 누구나 모든 입력 가능(Stand Alone으로 테스트용), false면 역할별 입력만 가능.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
-	bool bIgnorePlayerRole = true;
+	bool bIgnorePlayerRole = false;
 
 	// [한길] 0703 테스트용 앞뒤 움직임.
 	void RequestMove(float AxisValue);
@@ -107,4 +107,22 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void StopMove();
+
+	// [한길] 0710 5초 딜레이 스타트
+	/**
+ * 일정 시간 동안 대기한 뒤 공유 캐릭터의 자동 전진을 시작합니다.
+ * 서버에서만 실행되어야 합니다.
+ */
+	void StartAutoMoveAfterDelay();
+
+protected:
+	// 게임 시작 후 자동 전진까지 기다릴 시간입니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Start")
+	float AutoMoveStartDelay = 5.0f;
+
+	// 시작 지연 타이머를 관리합니다.
+	FTimerHandle AutoMoveStartTimerHandle;
+
+	// 타이머가 끝났을 때 실제로 AutoMove로 변경하는 함수입니다.
+	void HandleAutoMoveStart();
 };

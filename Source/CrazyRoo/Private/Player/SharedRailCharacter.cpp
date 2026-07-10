@@ -555,6 +555,7 @@ void ASharedRailCharacter::GetLifetimeReplicatedProps(
 	DOREPLIFETIME(ASharedRailCharacter, LaneCenterLocation);
 	DOREPLIFETIME(ASharedRailCharacter, CurrentPlayerHP);
 	DOREPLIFETIME(ASharedRailCharacter, bIsInvincible); // 무적 상태 동기화 추가
+	DOREPLIFETIME(ASharedRailCharacter, MoveMode); // 딜레이 스타트 위한 모드변경.
 }
 
 FVector ASharedRailCharacter::GetLaneCenterLocation() const

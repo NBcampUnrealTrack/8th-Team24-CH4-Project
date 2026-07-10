@@ -117,6 +117,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects", meta = (ClampMin = "0.0"))
 	float HitSoundPitch = 1.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects")
+	TObjectPtr<USoundBase> AttackSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects", meta = (ClampMin = "0.0"))
+	float AttackSoundVolume = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Effects", meta = (ClampMin = "0.0"))
+	float AttackSoundPitch = 1.0f;
+
 	FTimerHandle LifetimeTimerHandle;
 	FTimerHandle AttackTimerHandle;
 	FTimerHandle DeferredDestroyTimerHandle;
@@ -183,6 +192,9 @@ public:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastPlayHitEffect(FVector EffectLocation);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayAttackSound(FVector SoundLocation);
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
