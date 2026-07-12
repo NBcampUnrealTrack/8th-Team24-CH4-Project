@@ -29,7 +29,15 @@ void UCrazyRooSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	JoinSessionHandle = Sessions->AddOnJoinSessionCompleteDelegate_Handle(
 		FOnJoinSessionCompleteDelegate::CreateUObject(this, &UCrazyRooSessionSubsystem::HandleJoinSessionComplete));
 
+	// [EOS] 로그인 완료 콜백 등록 (클라 전용 기능이지만 등록 자체는 무해)
+	if (IOnlineIdentityPtr Identity = GetIdentityInterface())
+	{
+		LoginHandle = Identity->AddOnLoginCompleteDelegate_Handle(0,
+			FOnLoginCompleteDelegate::CreateUObject(this, &UCrazyRooSessionSubsystem::HandleLoginComplete));
+	}
+
 	// 데디케이티드 서버 프로세스라면 부팅과 동시에 세션 1개 등록
+	// [EOS] 서버는 로그인 불필요 — ini의 TrustedServer 자격증명(CrazyRooServer Artifact)으로 인증됨
 	if (IsRunningDedicatedServer())
 	{
 		CreateDedicatedSession();
@@ -46,6 +54,13 @@ void UCrazyRooSessionSubsystem::Deinitialize()
 		Sessions->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionHandle);
 	}
 
+	// [EOS] 로그인 콜백 해제
+	if (IOnlineIdentityPtr Identity = GetIdentityInterface())
+	{
+		Identity->ClearOnLoginCompleteDelegate_Handle(0, LoginHandle);
+	}
+
+
 	Super::Deinitialize();
 }
 
@@ -54,6 +69,81 @@ IOnlineSessionPtr UCrazyRooSessionSubsystem::GetSessionInterface() const
 	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
 	return OSS ? OSS->GetSessionInterface() : nullptr;
 }
+
+IOnlineIdentityPtr UCrazyRooSessionSubsystem::GetIdentityInterface() const
+{
+	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+	return OSS ? OSS->GetIdentityInterface() : nullptr;
+}
+
+bool UCrazyRooSessionSubsystem::RequiresLogin() const
+{
+	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+	return OSS && OSS->GetSubsystemName() != NULL_SUBSYSTEM;
+}
+
+// ─────────────────────────────────────────────────────────────
+// [EOS][Client] 로그인
+// ─────────────────────────────────────────────────────────────
+
+void UCrazyRooSessionSubsystem::LoginToEOS()
+{
+	// 이미 로그인됨(또는 LAN 모드라 불필요) → 즉시 성공 통지
+	if (IsLoggedIn())
+	{
+		OnLoginComplete.Broadcast(true, FString());
+		return;
+	}
+
+	if (bLoginInProgress)
+	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] 로그인 진행 중 — 중복 요청 무시"));
+		return;
+	}
+
+	IOnlineIdentityPtr Identity = GetIdentityInterface();
+	if (!Identity.IsValid())
+	{
+		OnLoginComplete.Broadcast(false, TEXT("온라인 서비스 초기화 실패 (ini 설정 확인)"));
+		return;
+	}
+
+	bLoginInProgress = true;
+	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] EOS AutoLogin 시작"));
+
+	// 커맨드라인의 -AUTH_LOGIN / -AUTH_PASSWORD / -AUTH_TYPE 인자를 읽어 로그인 시도.
+	// (개발: DevAuthTool의 developer 타입 / 출시: accountportal 등으로 교체)
+	if (!Identity->AutoLogin(0))
+	{
+		// 시작 자체가 실패 (인자 누락 등) — 콜백이 안 올 수 있으므로 여기서 직접 실패 처리
+		bLoginInProgress = false;
+		OnLoginComplete.Broadcast(false, TEXT("로그인을 시작할 수 없습니다. 실행 인자(-AUTH_*)를 확인하세요."));
+	}
+}
+
+bool UCrazyRooSessionSubsystem::IsLoggedIn() const
+{
+	// LAN(Null) 모드에서는 로그인이 필요 없으므로 항상 true 취급 → BP 흐름을 EOS/LAN 공용으로 유지
+	if (!RequiresLogin())
+	{
+		return true;
+	}
+
+	IOnlineIdentityPtr Identity = GetIdentityInterface();
+	return Identity.IsValid() && Identity->GetLoginStatus(0) == ELoginStatus::LoggedIn;
+}
+
+void UCrazyRooSessionSubsystem::HandleLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId,
+	const FString& Error)
+{
+	bLoginInProgress = false;
+
+	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] 로그인 완료: %s %s"),
+		bWasSuccessful ? TEXT("성공") : TEXT("실패"), *Error);
+
+	OnLoginComplete.Broadcast(bWasSuccessful, Error);
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // [Server] 세션 생성 (데디서버 부팅 시 1회)
@@ -75,6 +165,7 @@ void UCrazyRooSessionSubsystem::CreateDedicatedSession()
 	// 반드시 false로 해야 유저들이 이 방을 검색할 수 있습니다.
 	Settings.bUsesPresence         = false;
 	Settings.bUseLobbiesIfAvailable = false; // 스팀 Lobbies API 안 씀 (서버 브라우저 방식 사용)
+	Settings.bAllowInvites         = false;  // [EOS] 초대 기능 미사용 (presence 없는 데디 세션과 세트)
 	// 현재 플러그인이 Null(기본)이면 LAN 모드로 세팅합니다.
 	Settings.bIsLANMatch = (IOnlineSubsystem::Get()->GetSubsystemName() == NULL_SUBSYSTEM);
 
@@ -87,7 +178,6 @@ void UCrazyRooSessionSubsystem::CreateDedicatedSession()
 	Sessions->CreateSession(0, NAME_GameSession, Settings);
 
 }
-
 
 void UCrazyRooSessionSubsystem::HandleCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 {
@@ -111,6 +201,23 @@ void UCrazyRooSessionSubsystem::FindRooms()
 		return;
 	}
 
+	// [EOS] 미로그인 상태에서는 FindSessions가 백엔드에서 거부됨 → 미리 걸러서 명확한 실패 처리
+	if (!IsLoggedIn())
+	{
+		UE_LOG(LogCrazyRoo, Error, TEXT("[Session][CLIENT] EOS 미로그인 — FindRooms 불가. LoginToEOS를 먼저 호출하세요."));
+		// CreateRoom 흐름으로 들어온 경우 플래그 정리 + 알맞은 델리게이트로 통지
+		if (bAutoJoinIfEmpty)
+		{
+			bAutoJoinIfEmpty = false;
+			OnCreateRoomFailed.Broadcast(TEXT("로그인이 필요합니다. 잠시 후 다시 시도해 주세요."));
+		}
+		else
+		{
+			OnFindRoomsComplete.Broadcast({}, false);
+		}
+		return;
+	}
+
 	IOnlineSessionPtr Sessions = GetSessionInterface();
 	if (!Sessions.IsValid())
 	{
@@ -123,6 +230,15 @@ void UCrazyRooSessionSubsystem::FindRooms()
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
 	SessionSearch->MaxSearchResults = 20;
 	SessionSearch->bIsLanQuery = (IOnlineSubsystem::Get()->GetSubsystemName() == NULL_SUBSYSTEM);
+
+	// [EOS] 온라인 검색일 때는 우리 게임 세션만 잡히도록 커스텀 키로 필터.
+	// (EOS는 조건 없는 빈 쿼리 검색이 실패하는 경우가 있어 키 하나를 거는 게 안전.
+	//  LAN 검색은 브로드캐스트 방식이라 쿼리 필터가 불필요하므로 온라인일 때만 설정)
+	if (!SessionSearch->bIsLanQuery)
+	{
+		SessionSearch->QuerySettings.Set(RoomNameKey, FString(TEXT("CrazyRoo Room")), EOnlineComparisonOp::Equals);
+	}
+
 
 	// 데디서버를 찾는 것이므로 bUsesPresence 필터 조건을 달지 않습니다.
 	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] FindSessions 시작 (LAN=%d)"), SessionSearch->bIsLanQuery ? 1 : 0);
@@ -301,4 +417,5 @@ void UCrazyRooSessionSubsystem::HandleJoinSessionComplete(FName SessionName, EOn
 	// IP 주소를 긁어오는 데 실패했을 때의 예외 처리
 	OnJoinRoomComplete.Broadcast(false, TEXT("접속 주소를 확인할 수 없습니다."));
 }
+
 
