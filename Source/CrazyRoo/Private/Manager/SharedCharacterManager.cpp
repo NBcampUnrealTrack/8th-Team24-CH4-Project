@@ -446,6 +446,15 @@ void ASharedCharacterManager::HandlePlayerHitObstacle(ARunnerObstacle* Obstacle,
 	// 들어온 PlayerActor가 현재 조작중인 공유 캐릭터가 맞는지 확인
 	if (SharedCharacter && SharedCharacter == PlayerActor)
 	{
+		// [한길] 0713
+		// SlideRequired 장애물은 캡슐 크기를 줄이지 않고 슬라이딩 상태값으로 회피 판정합니다.
+		// 이렇게 하면 슬라이딩 중 캡슐 높이 변경으로 생기던 떨림을 피할 수 있습니다.
+		if (ActionType == ERunnerObstacleActionType::SlideRequired && SharedCharacter->IsSliding())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[MANAGER] SlideRequired 장애물 회피 성공"));
+			return;
+		}
+
 		// 상속받은 여러가지 Obstacle bp에서 데미지를 수정 가능
 		// [수정] 장애물 충돌은 기본값(false)이 들어가므로 1초 무적이 정상 적용됩니다.
 		SharedCharacter->ApplyPlayerDamage(Obstacle->GetObstacleDamage(), Obstacle, false);

@@ -239,8 +239,10 @@ void ASharedRailCharacter::DoSlide()
 
     bIsSliding = true;
 
-    // 슬라이딩 중에는 캡슐 높이를 낮춤
-    GetCapsuleComponent()->SetCapsuleHalfHeight(44.f);
+	// [한길] 0713
+	// 캡슐 높이를 직접 줄이면 레일 위치 보정/충돌 보정과 충돌해 캐릭터가 떨릴 수 있습니다.
+	// 따라서 캡슐 높이를 낮추는 코드를 삭제하였습니다.
+	// 슬라이딩은 bIsSliding 상태로만 판정하고, 시각 연출은 애니메이션이나 Mesh Offset으로 처리하면 좋을것 같습니다.
 
     // 0.8초 후 슬라이딩 종료
     GetWorldTimerManager().SetTimer(
@@ -289,8 +291,8 @@ void ASharedRailCharacter::EndSlide()
 
     bIsSliding = false;
 
-    // 캡슐 높이 원래대로 복구
-    GetCapsuleComponent()->SetCapsuleHalfHeight(88.f);
+	// [한길] 0713
+	// DoSlide에서 캡슐 높이를 바꾸지 않으므로 복구할 캡슐 값도 없습니다.
 
     UE_LOG(LogTemp,Warning,TEXT("SharedCharacter EndSlide"));
 }

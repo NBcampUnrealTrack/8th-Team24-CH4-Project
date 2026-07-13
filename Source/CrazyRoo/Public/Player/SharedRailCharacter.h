@@ -158,6 +158,11 @@ public:
 	bool IsPlayerDead() const { return CurrentPlayerHP <= 0.f; }
 	//
 
+	// [한길] 0713
+	// 캡슐 크기를 바꾸지 않고 슬라이딩 회피 판정에 사용할 현재 슬라이딩 상태입니다.
+	UFUNCTION(BlueprintPure, Category="Movement")
+	bool IsSliding() const { return bIsSliding; }
+
 	UFUNCTION(BlueprintPure, Category="Rail")
 	FVector GetLaneCenterLocation() const;
 
