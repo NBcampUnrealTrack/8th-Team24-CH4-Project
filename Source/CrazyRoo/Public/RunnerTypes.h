@@ -106,3 +106,12 @@ struct FFlyingEnemySpawnGroup
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn")
 	TArray<TSubclassOf<AFlyingEnemy>> EnemyClasses;
 };
+
+
+// [한길] 0710 발사 방식 Enum
+UENUM(BlueprintType)
+enum class ERunnerFireMode : uint8
+{
+	LineTrace UMETA(DisplayName = "Line Trace"),
+	Projectile UMETA(DisplayName = "Projectile")
+};

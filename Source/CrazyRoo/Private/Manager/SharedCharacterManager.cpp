@@ -248,7 +248,7 @@ void ASharedCharacterManager::RequestRotateCameraRight(ECrazyRooPlayerRole Reque
 	SharedCharacter->RotateCameraRight();
 }
 
-void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection)
+void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection, AController* ShooterController)
 {
 	if (!HasAuthority() || !SharedCharacter)
 	{
@@ -261,7 +261,8 @@ void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole,
 		return;
 	}
 
-	SharedCharacter->FireByAimRay(AimOrigin, AimDirection);
+	// [한길] 0710 발사 방식에 따라 발사 수행.
+	SharedCharacter->FireBySelectedMode(AimOrigin, AimDirection, ShooterController);
 }
 
 ATurnJudgeBox* ASharedCharacterManager::FindActiveTurnJudgeBox() const

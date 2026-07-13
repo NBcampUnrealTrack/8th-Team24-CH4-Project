@@ -442,6 +442,9 @@ void AFlyingEnemy::RefreshCollisionResponses()
 	HitBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	HitBox->SetCollisionResponseToChannel(ECC_Visibility, bBlockVisibilityChannel ? ECR_Block : ECR_Ignore);
 	HitBox->SetGenerateOverlapEvents(true);
+	// [한길] 0713
+	// FlyingEnemy는 투사체 피격 대상이므로 서버에서도 Projectile을 Block합니다.
+	HitBox->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
 }
 
 void AFlyingEnemy::StartAttackDelay()
