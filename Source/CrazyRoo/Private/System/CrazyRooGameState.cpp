@@ -24,6 +24,8 @@ void ACrazyRooGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ACrazyRooGameState, CurrentMapId);
 	DOREPLIFETIME(ACrazyRooGameState, CarouselIndex);
+	// [한길] 0711 카운트다운 시간 복제
+	DOREPLIFETIME(ACrazyRooGameState, Countdown);
 }
 
 FName ACrazyRooGameState::GetCurrentMapId() const
@@ -68,4 +70,29 @@ void ACrazyRooGameState::OnRep_CarouselIndex()
 {
 	// 클라이언트 UI 업데이트를 위해 브로드캐스트
 	OnCarouselIndexChanged.Broadcast(CarouselIndex);
+}
+
+void ACrazyRooGameState::SetCountdown(int32 NewCountdown)
+{
+	// GameState의 공유 값은 서버만 변경합니다.
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	Countdown = FMath::Max(0, NewCountdown);
+
+	// Listen Server에서는 OnRep이 자동 호출되지 않으므로
+	// 호스트 UI를 위해 직접 Broadcast합니다.
+	OnCountdownChanged.Broadcast(Countdown);
+
+	UE_LOG(LogTemp, Warning, TEXT("[Server] Countdown = %d"), Countdown);
+}
+
+void ACrazyRooGameState::OnRep_Countdown()
+{
+	// 클라이언트가 복제된 값을 받으면 UI에 알립니다.
+	OnCountdownChanged.Broadcast(Countdown);
+
+	UE_LOG(LogTemp, Warning, TEXT("[Client] OnRep_Countdown = %d"), Countdown);
 }

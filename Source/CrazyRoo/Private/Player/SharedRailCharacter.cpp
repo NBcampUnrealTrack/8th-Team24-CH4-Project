@@ -10,6 +10,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "CrazyRoo.h"
 
 ASharedRailCharacter::ASharedRailCharacter()
 {
@@ -81,6 +82,24 @@ void ASharedRailCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+	// [한길] 0712
+	// 카메라 회전은 위치 이동과 달리 로컬에서 보이는 SpringArm 회전을 갱신해야 합니다.
+	// TargetCameraYaw는 서버에서 복제되고, 서버/클라이언트 모두 Tick에서 보간해야 실제 화면에서도 회전이 보입니다.
+	if (SpringArm)
+	{
+		FRotator CurrentRot = SpringArm->GetRelativeRotation();
+		FRotator TargetRot = FRotator(CameraPitch, TargetCameraYaw, 0.f);
+
+		FRotator NewRot = FMath::RInterpTo(
+			CurrentRot,
+			TargetRot,
+			DeltaTime,
+			CameraInterpSpeed
+		);
+
+		SpringArm->SetRelativeRotation(NewRot);
+	}
+
     // 서버에서만 실제 위치 계산
     // 클라이언트는 서버에서 복제된 위치를 받음
     if (!HasAuthority())
@@ -139,19 +158,6 @@ void ASharedRailCharacter::Tick(float DeltaTime)
     );
 
     SetActorLocation(NewLocation);
-
-    // 카메라 회전은 서버/클라이언트 모두에서 보간
-    FRotator CurrentRot = SpringArm->GetRelativeRotation();
-    FRotator TargetRot = FRotator(CameraPitch, TargetCameraYaw, 0.f);
-
-    FRotator NewRot = FMath::RInterpTo(
-        CurrentRot,
-        TargetRot,
-        DeltaTime,
-        CameraInterpSpeed
-        );
-
-    SpringArm->SetRelativeRotation(NewRot);
 
 	if (bDebugLaneCenterTracking)
 	{
@@ -554,6 +560,7 @@ void ASharedRailCharacter::GetLifetimeReplicatedProps(
 	DOREPLIFETIME(ASharedRailCharacter, LaneCenterLocation);
 	DOREPLIFETIME(ASharedRailCharacter, CurrentPlayerHP);
 	DOREPLIFETIME(ASharedRailCharacter, bIsInvincible); // 무적 상태 동기화 추가
+	DOREPLIFETIME(ASharedRailCharacter, MoveMode); // 딜레이 스타트 위한 모드변경.
 }
 
 FVector ASharedRailCharacter::GetLaneCenterLocation() const
@@ -618,7 +625,14 @@ void ASharedRailCharacter::HandlePlayerDeath()
 	bPlayerDeathHandled = true;   // 이후 피격/중복 사망 차단
 
 	UE_LOG(LogTemp, Error, TEXT("[SERVER] 플레이어 사망"));
+	Multicast_NotifyPlayerDeath();
 	// TODO: 이후 GameMode에 게임오버 알림 (결과 맵 이동 등)
+}
+
+void ASharedRailCharacter::Multicast_NotifyPlayerDeath_Implementation()
+{
+	// 서버 + 모든 클라이언트 화면에서 실행됨
+	FCrazyRooDebug::PrintSystem(this, TEXT("플레이어 사망!"), FColor::Red, 10.0f);
 }
 
 //[한길] 0703 테스트용 앞뒤 움직임.
