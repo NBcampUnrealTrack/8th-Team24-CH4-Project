@@ -47,7 +47,7 @@ public:
 	void RequestFireToLocation(ECrazyRooPlayerRole RequestRole, const FVector& TargetLocation);
 	void RequestRotateCameraLeft(ECrazyRooPlayerRole RequestRole);
 	void RequestRotateCameraRight(ECrazyRooPlayerRole RequestRole);
-	void RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection);
+	void RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection, AController* ShooterController);
 
 protected:
 	// 맵에 배치된 BP_SharedRailCharacter를 저장

@@ -461,7 +461,8 @@ void ACrazyRooPlayerController::Server_RequestFireAimRay_Implementation(
 {
 	if (ASharedCharacterManager* Manager = GetManagerOnServer())
 	{
-		Manager->RequestFireAimRay(GetMyRoleOnServer(), AimOrigin, AimDirection);
+		// [한길] 0710 발사방식 선택모드로 인한 변경.
+		Manager->RequestFireAimRay(GetMyRoleOnServer(), AimOrigin, AimDirection, this);
 	}
 }
 
