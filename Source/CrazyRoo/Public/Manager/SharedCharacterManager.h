@@ -92,6 +92,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bIgnorePlayerRole = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Runner|Input")
+	bool bRunnerInputLocked = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Runner|Input")
+	void SetRunnerInputLocked(bool bLocked);
+
 	// [한길] 0712
 	// 테스트 시작 모드에서 역할 배정을 무시하고 모든 플레이어 입력을 허용할지 설정합니다.
 	UFUNCTION(BlueprintCallable, Category = "Debug")

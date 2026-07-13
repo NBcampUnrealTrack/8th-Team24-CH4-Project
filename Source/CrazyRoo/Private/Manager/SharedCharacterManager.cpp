@@ -108,7 +108,7 @@ void ASharedCharacterManager::InitializeSharedCharacter()
 
 void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -142,7 +142,7 @@ void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
 
 void ASharedCharacterManager::RequestMoveRight(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -169,7 +169,7 @@ void ASharedCharacterManager::RequestMoveRight(ECrazyRooPlayerRole RequestRole)
 
 void ASharedCharacterManager::RequestJump(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -186,7 +186,7 @@ void ASharedCharacterManager::RequestJump(ECrazyRooPlayerRole RequestRole)
 
 void ASharedCharacterManager::RequestSlide(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -202,7 +202,7 @@ void ASharedCharacterManager::RequestSlide(ECrazyRooPlayerRole RequestRole)
 
 void ASharedCharacterManager::RequestFireToLocation(ECrazyRooPlayerRole RequestRole, const FVector& TargetLocation)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -218,7 +218,7 @@ void ASharedCharacterManager::RequestFireToLocation(ECrazyRooPlayerRole RequestR
 
 void ASharedCharacterManager::RequestRotateCameraLeft(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -234,7 +234,7 @@ void ASharedCharacterManager::RequestRotateCameraLeft(ECrazyRooPlayerRole Reques
 
 void ASharedCharacterManager::RequestRotateCameraRight(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -250,7 +250,7 @@ void ASharedCharacterManager::RequestRotateCameraRight(ECrazyRooPlayerRole Reque
 
 void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection, AController* ShooterController)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -383,12 +383,22 @@ void ASharedCharacterManager::StopFlyingEnemiesForRunnerTurn()
 //[한길] 0703 테스트용 앞뒤 움직임.
 void ASharedCharacterManager::RequestMove(float AxisValue)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
 
 	SharedCharacter->DebugMoveForward(AxisValue);
+}
+
+void ASharedCharacterManager::SetRunnerInputLocked(bool bLocked)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bRunnerInputLocked = bLocked;
 }
 
 // [한길] 0712
