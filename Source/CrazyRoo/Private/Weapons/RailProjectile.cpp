@@ -62,8 +62,8 @@ ARailProjectile::ARailProjectile()
 	ProjectileMovement->UpdatedComponent = CollisionComponent;
 
 	// 투사체 속도
-	ProjectileMovement->InitialSpeed = 3000.f;
-	ProjectileMovement->MaxSpeed = 3000.f;
+	ProjectileMovement->InitialSpeed = 6000.f;
+	ProjectileMovement->MaxSpeed = 6000.f;
 
 	// 총알이 중력에 의해 떨어지지 않게 설정
 	ProjectileMovement->ProjectileGravityScale = 0.f;
