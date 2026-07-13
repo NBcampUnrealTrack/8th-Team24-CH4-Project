@@ -10,6 +10,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Weapons/RailProjectile.h"
 #include "CrazyRoo.h"
 
 ASharedRailCharacter::ASharedRailCharacter()
@@ -82,6 +83,24 @@ void ASharedRailCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+	// [한길] 0712
+	// 카메라 회전은 위치 이동과 달리 로컬에서 보이는 SpringArm 회전을 갱신해야 합니다.
+	// TargetCameraYaw는 서버에서 복제되고, 서버/클라이언트 모두 Tick에서 보간해야 실제 화면에서도 회전이 보입니다.
+	if (SpringArm)
+	{
+		FRotator CurrentRot = SpringArm->GetRelativeRotation();
+		FRotator TargetRot = FRotator(CameraPitch, TargetCameraYaw, 0.f);
+
+		FRotator NewRot = FMath::RInterpTo(
+			CurrentRot,
+			TargetRot,
+			DeltaTime,
+			CameraInterpSpeed
+		);
+
+		SpringArm->SetRelativeRotation(NewRot);
+	}
+
     // 서버에서만 실제 위치 계산
     // 클라이언트는 서버에서 복제된 위치를 받음
     if (!HasAuthority())
@@ -140,19 +159,6 @@ void ASharedRailCharacter::Tick(float DeltaTime)
     );
 
     SetActorLocation(NewLocation);
-
-    // 카메라 회전은 서버/클라이언트 모두에서 보간
-    FRotator CurrentRot = SpringArm->GetRelativeRotation();
-    FRotator TargetRot = FRotator(CameraPitch, TargetCameraYaw, 0.f);
-
-    FRotator NewRot = FMath::RInterpTo(
-        CurrentRot,
-        TargetRot,
-        DeltaTime,
-        CameraInterpSpeed
-        );
-
-    SpringArm->SetRelativeRotation(NewRot);
 
 	if (bDebugLaneCenterTracking)
 	{
@@ -680,4 +686,195 @@ void ASharedRailCharacter::ResetInvincibility()
 		bIsInvincible = false;
 		UE_LOG(LogTemp, Warning, TEXT("[SERVER] 무적 시간이 종료"));
 	}
+}
+
+// [한길] 0710 발사방식 변경.
+void ASharedRailCharacter::FireBySelectedMode(
+	const FVector& AimOrigin,
+	const FVector& AimDirection,
+	AController* ShooterController
+)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	switch (FireMode)
+	{
+	case ERunnerFireMode::LineTrace:
+		// 기존 팀 프로젝트의 LineTrace 방식
+		FireByAimRay(AimOrigin, AimDirection);
+		break;
+
+	case ERunnerFireMode::Projectile:
+		// 새로 추가한 Projectile 방식
+		FireProjectileByAimRay(
+			AimOrigin,
+			AimDirection,
+			ShooterController
+		);
+		break;
+
+	default:
+		break;
+	}
+}
+
+// [한길] 0710 투사체 발사 방식.
+void ASharedRailCharacter::FireProjectileByAimRay(
+	const FVector& AimOrigin,
+	const FVector& AimDirection,
+	AController* ShooterController
+)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!ProjectileClass)
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("ProjectileClass is NULL")
+		);
+		return;
+	}
+
+	UWorld* World = GetWorld();
+
+	if (!World)
+	{
+		return;
+	}
+
+	const FVector NormalizedAimDirection =
+		AimDirection.GetSafeNormal();
+
+	/*
+	 * 1단계:
+	 * 카메라에서 마우스 커서 방향으로 LineTrace하여
+	 * 실제 조준 지점을 찾습니다.
+	 *
+	 * 이 Trace는 데미지용이 아니라 조준 지점 계산용입니다.
+	 */
+	const FVector AimEnd =
+		AimOrigin + NormalizedAimDirection * AimRayDistance;
+
+	FHitResult AimHit;
+
+	FCollisionQueryParams AimParams;
+	AimParams.AddIgnoredActor(this);
+
+	const bool bAimHit =
+		World->LineTraceSingleByChannel(
+			AimHit,
+			AimOrigin,
+			AimEnd,
+			ECC_Visibility,
+			AimParams
+		);
+
+	const FVector TargetPoint =
+		bAimHit ? AimHit.ImpactPoint : AimEnd;
+
+	/*
+	 * 2단계:
+	 * Projectile이 생성될 발사 위치를 계산합니다.
+	 */
+	FVector MuzzleLocation = GetActorLocation();
+
+	MuzzleLocation +=
+		GetActorForwardVector() * ProjectileSpawnForwardOffset;
+
+	MuzzleLocation.Z += ProjectileSpawnHeight;
+
+	/*
+	 * 발사 위치에서 마우스 조준 지점을 바라보는 방향을 계산합니다.
+	 */
+	const FVector ShotDirection =
+		(TargetPoint - MuzzleLocation).GetSafeNormal();
+
+	const FRotator SpawnRotation =
+		ShotDirection.Rotation();
+
+	FActorSpawnParameters SpawnParameters;
+
+	// 발사 캐릭터를 Owner로 설정
+	SpawnParameters.Owner = this;
+
+	// Character는 Pawn이므로 Instigator로 사용할 수 있습니다.
+	SpawnParameters.Instigator = this;
+
+	/*
+	 * 발사 위치 주변에 약간의 충돌이 있어도 위치를 조정해서 스폰합니다.
+	 * AlwaysSpawn보다 AdjustIfPossibleButAlwaysSpawn이 안전합니다.
+	 */
+	SpawnParameters.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::
+		AdjustIfPossibleButAlwaysSpawn;
+
+	ARailProjectile* SpawnedProjectile =
+		World->SpawnActor<ARailProjectile>(
+			ProjectileClass,
+			MuzzleLocation,
+			SpawnRotation,
+			SpawnParameters
+		);
+
+	if (!SpawnedProjectile)
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("Projectile Spawn Failed")
+		);
+		return;
+	}
+
+	SpawnedProjectile->InitializeProjectile(
+		ShotDirection,
+		ProjectileDamage,
+		ShooterController
+	);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Projectile Spawned: %s"),
+		*MuzzleLocation.ToString()
+	);
+
+	if (bAimHit)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("Aim Trace Hit: %s / Point: %s"),
+			AimHit.GetActor() ? *AimHit.GetActor()->GetName() : TEXT("None"),
+			*AimHit.ImpactPoint.ToString()
+		);
+	}
+	else
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("Aim Trace Miss / AimEnd: %s"),
+			*AimEnd.ToString()
+		);
+	}
+
+	DrawDebugLine(
+	GetWorld(),
+	MuzzleLocation,
+	AimEnd,
+	FColor::Blue,
+	false,
+	2.f,
+	0,
+	2.f
+	);
 }

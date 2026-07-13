@@ -101,8 +101,9 @@ void ASharedCharacterManager::InitializeSharedCharacter()
 		UE_LOG(LogTemp,Error,TEXT("Manager could not find SharedCharacter"));
     }
 
-	// 공유 캐릭터를 찾은 뒤 5초 카운트다운을 시작합니다.
-	StartAutoMoveAfterDelay();
+	// [한길] 0712
+	// 시작 방식과 카운트다운은 GameMode의 GameStartMode에서 결정합니다.
+	// 여기서 별도 타이머를 걸면 ManualTest 중에도 나중에 AutoMove로 바뀔 수 있으므로 자동 시작은 하지 않습니다.
 }
 
 void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
@@ -247,7 +248,7 @@ void ASharedCharacterManager::RequestRotateCameraRight(ECrazyRooPlayerRole Reque
 	SharedCharacter->RotateCameraRight();
 }
 
-void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection)
+void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection, AController* ShooterController)
 {
 	if (!HasAuthority() || !SharedCharacter)
 	{
@@ -260,7 +261,8 @@ void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole,
 		return;
 	}
 
-	SharedCharacter->FireByAimRay(AimOrigin, AimDirection);
+	// [한길] 0710 발사 방식에 따라 발사 수행.
+	SharedCharacter->FireBySelectedMode(AimOrigin, AimDirection, ShooterController);
 }
 
 ATurnJudgeBox* ASharedCharacterManager::FindActiveTurnJudgeBox() const
@@ -387,6 +389,25 @@ void ASharedCharacterManager::RequestMove(float AxisValue)
 	}
 
 	SharedCharacter->DebugMoveForward(AxisValue);
+}
+
+// [한길] 0712
+// true로 설정하면 역할 배정과 상관없이 이동, 점프, 슬라이드, 발사, 카메라 회전 요청을 모두 통과시킵니다.
+void ASharedCharacterManager::SetIgnorePlayerRole(bool bShouldIgnorePlayerRole)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bIgnorePlayerRole = bShouldIgnorePlayerRole;
+
+	UE_LOG(
+		LogCrazyRoo,
+		Warning,
+		TEXT("Ignore Player Role: %s"),
+		bIgnorePlayerRole ? TEXT("true") : TEXT("false")
+	);
 }
 
 // 적이 스폰될 때마다 호출 → 그 적의 공격 이벤트를 구독

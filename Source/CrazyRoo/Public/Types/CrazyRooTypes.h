@@ -26,6 +26,23 @@ enum class ECrazyRooPlayerRole : uint8
 	P_Acrobat	UMETA(DisplayName = "Acrobat")
 };
 
+
+// [한길] 0712
+// 게임플레이 맵이 시작될 때 어떤 흐름으로 이동을 시작할지 결정합니다.
+// ERunnerMoveMode는 캐릭터의 실제 이동 방식이고, 이 enum은 테스트/실게임 시작 절차를 고르는 용도입니다.
+UENUM(BlueprintType)
+enum class ECrazyRooGameStartMode : uint8
+{
+	// 실게임 기본 흐름: 카운트다운 후 자동 전진을 시작합니다.
+	Normal UMETA(DisplayName = "Normal"),
+
+	// 테스트용 흐름: 카운트다운 없이 바로 수동 전/후진 입력을 받습니다.
+	ManualTest UMETA(DisplayName = "Manual Test"),
+
+	// 테스트용 흐름: 카운트다운 없이 바로 자동 전진을 시작합니다.
+	AutoMoveTest UMETA(DisplayName = "Auto Move Test")
+};
+
 /** 스테이지를 어딜 갈지 저장하는 구조체 (데이터 테이블 표에 사용되는 구조체입니다) */
 USTRUCT(BlueprintType)
 struct FCrazyRooStageInfo : public FTableRowBase

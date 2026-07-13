@@ -47,7 +47,7 @@ public:
 	void RequestFireToLocation(ECrazyRooPlayerRole RequestRole, const FVector& TargetLocation);
 	void RequestRotateCameraLeft(ECrazyRooPlayerRole RequestRole);
 	void RequestRotateCameraRight(ECrazyRooPlayerRole RequestRole);
-	void RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection);
+	void RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection, AController* ShooterController);
 
 protected:
 	// 맵에 배치된 BP_SharedRailCharacter를 저장
@@ -91,6 +91,11 @@ public:
 	// 테스트 목적으로 생성. true면 누구나 모든 입력 가능(Stand Alone으로 테스트용), false면 역할별 입력만 가능.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bIgnorePlayerRole = false;
+
+	// [한길] 0712
+	// 테스트 시작 모드에서 역할 배정을 무시하고 모든 플레이어 입력을 허용할지 설정합니다.
+	UFUNCTION(BlueprintCallable, Category = "Debug")
+	void SetIgnorePlayerRole(bool bShouldIgnorePlayerRole);
 
 	// [한길] 0703 테스트용 앞뒤 움직임.
 	void RequestMove(float AxisValue);

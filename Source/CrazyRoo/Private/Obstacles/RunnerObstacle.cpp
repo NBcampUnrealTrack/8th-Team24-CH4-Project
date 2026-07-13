@@ -213,6 +213,11 @@ void ARunnerObstacle::RefreshCollisionResponses()
 	CollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
 	CollisionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	CollisionBox->SetCollisionResponseToChannel(ECC_Visibility, IsShootRequiredObstacle() && bBlockVisibilityWhenShootRequired ? ECR_Block : ECR_Ignore);
+
+	// [한길] 0713
+	// ShootRequired 장애물은 서버에서도 Projectile을 Block해야 투사체 데미지를 받을 수 있습니다.
+	CollisionBox->SetCollisionResponseToChannel(ECC_GameTraceChannel1, IsShootRequiredObstacle() ? ECR_Block : ECR_Ignore);
+
 	CollisionBox->SetGenerateOverlapEvents(true);
 }
 

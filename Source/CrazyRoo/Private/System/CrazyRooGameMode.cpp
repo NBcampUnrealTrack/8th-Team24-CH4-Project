@@ -9,6 +9,7 @@
 #include "GameFramework/PlayerController.h"
 #include "System/CrazyRooGameInstance.h"
 #include "Manager/SharedCharacterManager.h"
+#include "TimerManager.h"
 
 ACrazyRooGameMode::ACrazyRooGameMode()
 {
@@ -41,6 +42,14 @@ void ACrazyRooGameMode::BeginPlay()
 				FCrazyRooDebug::Print(this,
 					SharedCharacterManager ? TEXT("SharedCharacterManager 스폰 완료") : TEXT("SharedCharacterManager 스폰 실패"),
 					SharedCharacterManager ? FColor::Cyan : FColor::Red);
+
+				// [한길] 0711 매니저 스폰이 성공했을 때만 카운트다운 시작.
+				if (SharedCharacterManager)
+				{
+					// [한길] 0712
+					// 시작 방식 선택을 GameMode에서만 처리하여 테스트 모드와 카운트다운 흐름이 서로 꼬이지 않게 합니다.
+					HandleGameStartMode();
+				}
 			}
 		}
 	}
@@ -429,4 +438,104 @@ void ACrazyRooGameMode::ApplyMatchStateForCurrentMap()
 	}
 
 	GS->SetCurrentMapId(GI->CurrentMapId);
+}
+
+// [한길] 0712
+// GameStartMode에 따라 실게임 카운트다운 또는 테스트용 즉시 이동 모드를 시작합니다.
+// Manager는 캐릭터에 이동 모드를 적용하는 역할만 하고, 시작 절차의 기준은 GameMode가 가집니다.
+void ACrazyRooGameMode::HandleGameStartMode()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!SharedCharacterManager)
+	{
+		UE_LOG(LogCrazyRoo, Error, TEXT("HandleGameStartMode failed: SharedCharacterManager is NULL"));
+		return;
+	}
+
+	switch (GameStartMode)
+	{
+	case ECrazyRooGameStartMode::Normal:
+		// 실게임 기본 흐름입니다. 먼저 정지 상태로 두고, 카운트다운이 끝나면 StartGame()에서 AutoMove로 전환합니다.
+		// Normal에서는 기존처럼 역할별 입력 제한을 유지합니다.
+		SharedCharacterManager->SetIgnorePlayerRole(false);
+		SharedCharacterManager->StopMove();
+		StartCountdown();
+		UE_LOG(LogCrazyRoo, Warning, TEXT("Game Start Mode: Normal"));
+		break;
+
+	case ECrazyRooGameStartMode::ManualTest:
+		// 수동 이동 테스트용 흐름입니다. 카운트다운을 생략하고 W/S DebugMoveForward 입력을 바로 받을 수 있게 합니다.
+		GetWorldTimerManager().ClearTimer(CountdownTimer);
+		// 테스트 모드에서는 역할 배정을 무시하여 한 플레이어가 모든 조작을 확인할 수 있게 합니다.
+		SharedCharacterManager->SetIgnorePlayerRole(true);
+		SharedCharacterManager->StartManualMove();
+		UE_LOG(LogCrazyRoo, Warning, TEXT("Game Start Mode: ManualTest"));
+		break;
+
+	case ECrazyRooGameStartMode::AutoMoveTest:
+		// 자동 이동만 빠르게 확인하는 테스트용 흐름입니다. 카운트다운 없이 즉시 AutoMove로 전환합니다.
+		GetWorldTimerManager().ClearTimer(CountdownTimer);
+		// 테스트 모드에서는 역할 배정을 무시하여 한 플레이어가 모든 조작을 확인할 수 있게 합니다.
+		SharedCharacterManager->SetIgnorePlayerRole(true);
+		SharedCharacterManager->StartAutoMove();
+		UE_LOG(LogCrazyRoo, Warning, TEXT("Game Start Mode: AutoMoveTest"));
+		break;
+
+	default:
+		UE_LOG(LogCrazyRoo, Error, TEXT("Unknown GameStartMode"));
+		break;
+	}
+}
+
+void ACrazyRooGameMode::StartCountdown()
+{
+	CurrentCountdown = CountdownSeconds;
+
+	if (ACrazyRooGameState* GS = GetGameState<ACrazyRooGameState>())
+	{
+		GS->SetCountdown(CurrentCountdown);
+	}
+
+	GetWorldTimerManager().SetTimer(
+		CountdownTimer,
+		this,
+		&ACrazyRooGameMode::CountdownTick,
+		1.f,
+		true
+	);
+}
+
+void ACrazyRooGameMode::CountdownTick()
+{
+	CurrentCountdown--;
+
+	if (ACrazyRooGameState* GS =
+		GetGameState<ACrazyRooGameState>())
+	{
+		GS->SetCountdown(CurrentCountdown);
+	}
+
+	if (CurrentCountdown <= 0)
+	{
+		GetWorldTimerManager().ClearTimer(
+			CountdownTimer);
+
+		StartGame();
+	}
+}
+
+void ACrazyRooGameMode::StartGame()
+{
+	if (!SharedCharacterManager)
+	{
+		return;
+	}
+
+	// [한길] 0712
+	// Normal 모드의 카운트다운이 끝났을 때만 호출되는 실제 게임 시작 처리입니다.
+	SharedCharacterManager->StartAutoMove();
 }

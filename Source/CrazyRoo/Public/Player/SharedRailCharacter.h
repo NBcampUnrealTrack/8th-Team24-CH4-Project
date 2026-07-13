@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "RunnerTypes.h"
 #include "SharedRailCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
+class ARailProjectile;
 
 // [한길] 0706 자동전진 / 수동전진 0707 멈춤 추가.
 UENUM(BlueprintType)
@@ -213,4 +215,43 @@ protected:
 	bool bPlayerDeathHandled = false;
 	float DebugLaneCenterTrackingLogElapsed = 0.0f;
 
+// [한길] 0710 발사 방식 변경.
+public:
+	// 현재 사용할 발사 방식
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shooting")
+	ERunnerFireMode FireMode = ERunnerFireMode::LineTrace;
+
+	// 스폰할 Projectile 블루프린트 클래스
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shooting|Projectile")
+	TSubclassOf<ARailProjectile> ProjectileClass;
+
+	// 투사체 데미지
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shooting|Projectile")
+	float ProjectileDamage = 20.f;
+
+	// 캐릭터 중심으로부터 총구 높이
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shooting|Projectile")
+	float ProjectileSpawnHeight = 80.f;
+
+	// 캐릭터 중심에서 앞으로 얼마나 떨어져 스폰할지 설정
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shooting|Projectile")
+	float ProjectileSpawnForwardOffset = 100.f;
+
+	/**
+	 * 현재 FireMode에 따라 LineTrace 또는 Projectile 방식으로 발사합니다.
+	 */
+	void FireBySelectedMode(
+		const FVector& AimOrigin,
+		const FVector& AimDirection,
+		AController* ShooterController
+	);
+
+	/**
+	 * Projectile 방식의 실제 발사 함수입니다.
+	 */
+	void FireProjectileByAimRay(
+		const FVector& AimOrigin,
+		const FVector& AimDirection,
+		AController* ShooterController
+	);
 };

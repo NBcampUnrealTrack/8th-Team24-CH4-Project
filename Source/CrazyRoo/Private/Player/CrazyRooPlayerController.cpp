@@ -20,6 +20,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "InputActionValue.h" // 테슽트용 앞 뒤 움직임.
 #include "System/CrazyRooGameInstance.h"
+#include "UI/CrazyRooCountdownWidget.h" // [한길] 0711 카운트다운 위젯
 
 
 void ACrazyRooPlayerController::BeginPlay()
@@ -65,6 +66,36 @@ void ACrazyRooPlayerController::BeginPlay()
 	//		UE_LOG(LogCrazyRoo, Warning, TEXT("ViewTarget set to SharedCharacter"));
 	//	}
 	//}
+
+	// [한길] 0711 카운트다운 UI
+	if (!IsLocalController())
+	{
+		return;
+	}
+	// ---------------------------------------------------------
+	// 카운트다운 UI 생성
+	// ---------------------------------------------------------
+	if (!CountdownWidgetClass)
+	{
+		UE_LOG(LogCrazyRoo, Error, TEXT("CountdownWidgetClass is NULL"));
+
+		return;
+	}
+
+	CountdownWidget = CreateWidget<UCrazyRooCountdownWidget>(this, CountdownWidgetClass);
+
+	if (!CountdownWidget)
+	{
+		UE_LOG(LogCrazyRoo, Error, TEXT("CountdownWidget creation failed"));
+
+		return;
+	}
+
+	// 각 플레이어 자신의 화면에 위젯을 추가합니다.
+	CountdownWidget->AddToPlayerScreen(10);
+
+	UE_LOG(LogCrazyRoo, Warning, TEXT("CountdownWidget added to player screen"));
+
 }
 
 
@@ -430,7 +461,8 @@ void ACrazyRooPlayerController::Server_RequestFireAimRay_Implementation(
 {
 	if (ASharedCharacterManager* Manager = GetManagerOnServer())
 	{
-		Manager->RequestFireAimRay(GetMyRoleOnServer(), AimOrigin, AimDirection);
+		// [한길] 0710 발사방식 선택모드로 인한 변경.
+		Manager->RequestFireAimRay(GetMyRoleOnServer(), AimOrigin, AimDirection, this);
 	}
 }
 
