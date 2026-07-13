@@ -8,6 +8,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Engine/GameInstance.h"
 #include "Types/CrazyRooTypes.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 const FName UCrazyRooSessionSubsystem::RoomNameKey(TEXT("ROOM_NAME"));
 
@@ -49,6 +51,11 @@ void UCrazyRooSessionSubsystem::Deinitialize()
 {
 	if (IOnlineSessionPtr Sessions = GetSessionInterface())
 	{
+		// [정리] 종료 시 내가 만든/참가한 세션 해제 → 유령 방 방지 (정상 종료 한정)
+		if (Sessions->GetNamedSession(NAME_GameSession))
+		{
+			Sessions->DestroySession(NAME_GameSession);
+		}
 		Sessions->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionHandle);
 		Sessions->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsHandle);
 		Sessions->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionHandle);
@@ -109,16 +116,31 @@ void UCrazyRooSessionSubsystem::LoginToEOS()
 	}
 
 	bLoginInProgress = true;
-	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] EOS AutoLogin 시작"));
 
-	// 커맨드라인의 -AUTH_LOGIN / -AUTH_PASSWORD / -AUTH_TYPE 인자를 읽어 로그인 시도.
-	// (개발: DevAuthTool의 developer 타입 / 출시: accountportal 등으로 교체)
-	if (!Identity->AutoLogin(0))
+	// ── [개발 모드] 실행 인자에 -AUTH_LOGIN이 있으면 DevAuthTool 로그인 (bat 파일 경로) ──
+	FString Unused;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AUTH_LOGIN="), Unused))
 	{
-		// 시작 자체가 실패 (인자 누락 등) — 콜백이 안 올 수 있으므로 여기서 직접 실패 처리
-		bLoginInProgress = false;
-		OnLoginComplete.Broadcast(false, TEXT("로그인을 시작할 수 없습니다. 실행 인자(-AUTH_*)를 확인하세요."));
+		UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] EOS AutoLogin 시작 (DevAuthTool)"));
+		if (!Identity->AutoLogin(0))
+		{
+			bLoginInProgress = false;
+			OnLoginComplete.Broadcast(false, TEXT("로그인을 시작할 수 없습니다. 실행 인자(-AUTH_*)를 확인하세요."));
+		}
+		return;
 	}
+
+	// ── [배포 모드] 인자가 없으면: 항상 에픽 로그인 창(accountportal)으로 ──
+	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] EOS AccountPortal 로그인 시도"));
+	FOnlineAccountCredentials Credentials(TEXT("accountportal"), TEXT(""), TEXT(""));
+	Identity->Login(0, Credentials);
+
+	// ── [배포 모드] 인자가 없으면: 저장된 토큰(persistentauth)으로 조용히 로그인 시도 ──
+	//UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] EOS PersistentAuth 로그인 시도"));
+	//bTriedPersistentAuth = true;
+	//FOnlineAccountCredentials Credentials(TEXT("persistentauth"), TEXT(""), TEXT(""));
+	//Identity->Login(0, Credentials);
+
 }
 
 bool UCrazyRooSessionSubsystem::IsLoggedIn() const
@@ -136,7 +158,22 @@ bool UCrazyRooSessionSubsystem::IsLoggedIn() const
 void UCrazyRooSessionSubsystem::HandleLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId,
 	const FString& Error)
 {
+	// [배포] persistentauth 실패 = 최초 실행이거나 토큰 만료 → 에픽 로그인 창으로 폴백 (1회만)
+	//if (!bWasSuccessful && bTriedPersistentAuth)
+	//{
+	//	bTriedPersistentAuth = false;
+	//	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] PersistentAuth 실패 → AccountPortal 폴백"));
+
+	//	if (IOnlineIdentityPtr Identity = GetIdentityInterface())
+	//	{
+	//		FOnlineAccountCredentials Credentials(TEXT("accountportal"), TEXT(""), TEXT(""));
+	//		Identity->Login(0, Credentials);
+	//		return; // 다음 콜백을 기다림 (bLoginInProgress는 유지)
+	//	}
+	//}
+
 	bLoginInProgress = false;
+	//bTriedPersistentAuth = false;
 
 	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] 로그인 완료: %s %s"),
 		bWasSuccessful ? TEXT("성공") : TEXT("실패"), *Error);

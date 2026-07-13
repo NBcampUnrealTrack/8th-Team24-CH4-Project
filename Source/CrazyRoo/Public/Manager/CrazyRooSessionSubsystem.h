@@ -140,5 +140,7 @@ protected:
 
 	// EOS 로그인 진행 중 플래그 (중복 AutoLogin 방지)
 	bool bLoginInProgress = false;
-	
+
+	// [배포] persistentauth를 먼저 시도했는지 (실패 시 accountportal 폴백 1회용)
+	bool bTriedPersistentAuth = false;
 };
