@@ -92,6 +92,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bIgnorePlayerRole = false;
 
+	// [한길] 0712
+	// 테스트 시작 모드에서 역할 배정을 무시하고 모든 플레이어 입력을 허용할지 설정합니다.
+	UFUNCTION(BlueprintCallable, Category = "Debug")
+	void SetIgnorePlayerRole(bool bShouldIgnorePlayerRole);
+
 	// [한길] 0703 테스트용 앞뒤 움직임.
 	void RequestMove(float AxisValue);
 

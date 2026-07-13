@@ -82,6 +82,24 @@ void ASharedRailCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+	// [한길] 0712
+	// 카메라 회전은 위치 이동과 달리 로컬에서 보이는 SpringArm 회전을 갱신해야 합니다.
+	// TargetCameraYaw는 서버에서 복제되고, 서버/클라이언트 모두 Tick에서 보간해야 실제 화면에서도 회전이 보입니다.
+	if (SpringArm)
+	{
+		FRotator CurrentRot = SpringArm->GetRelativeRotation();
+		FRotator TargetRot = FRotator(CameraPitch, TargetCameraYaw, 0.f);
+
+		FRotator NewRot = FMath::RInterpTo(
+			CurrentRot,
+			TargetRot,
+			DeltaTime,
+			CameraInterpSpeed
+		);
+
+		SpringArm->SetRelativeRotation(NewRot);
+	}
+
     // 서버에서만 실제 위치 계산
     // 클라이언트는 서버에서 복제된 위치를 받음
     if (!HasAuthority())
@@ -140,19 +158,6 @@ void ASharedRailCharacter::Tick(float DeltaTime)
     );
 
     SetActorLocation(NewLocation);
-
-    // 카메라 회전은 서버/클라이언트 모두에서 보간
-    FRotator CurrentRot = SpringArm->GetRelativeRotation();
-    FRotator TargetRot = FRotator(CameraPitch, TargetCameraYaw, 0.f);
-
-    FRotator NewRot = FMath::RInterpTo(
-        CurrentRot,
-        TargetRot,
-        DeltaTime,
-        CameraInterpSpeed
-        );
-
-    SpringArm->SetRelativeRotation(NewRot);
 
 	if (bDebugLaneCenterTracking)
 	{

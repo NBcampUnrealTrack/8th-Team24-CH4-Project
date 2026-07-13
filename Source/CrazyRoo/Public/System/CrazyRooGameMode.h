@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "Types/CrazyRooTypes.h"
 #include "CrazyRooGameMode.generated.h"
 
 
@@ -80,6 +81,39 @@ protected:
 	bool bDevAllowSoloStart = true;
 	// ★ [추가 끝] ────────────────────────────────────────────
 
+	// [한길] 0712
+	// 게임플레이 맵 시작 방식을 선택합니다.
+	// Normal은 기존처럼 카운트다운 후 AutoMove, 테스트 모드는 카운트다운 없이 즉시 원하는 이동 모드로 시작합니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "CrazyRoo|Dev")
+	ECrazyRooGameStartMode GameStartMode = ECrazyRooGameStartMode::Normal;
+
+	// [한길] 0712
+	// GameStartMode 값에 따라 카운트다운을 시작하거나 테스트용 이동 모드로 바로 전환합니다.
+	void HandleGameStartMode();
+
+
+	// -----------------------------
+	// [한길] 0711 카운트다운 관련
+	// -----------------------------
+
+	// 1초마다 실행되는 타이머
+	FTimerHandle CountdownTimer;
+
+	// 시작 카운트다운 시간
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "CrazyRoo|Countdown")
+	int32 CountdownSeconds = 5;
+
+	// 현재 남은 시간
+	int32 CurrentCountdown;
+
+	// 카운트다운 시작
+	void StartCountdown();
+
+	// 1초마다 호출
+	void CountdownTick();
+
+	// 카운트다운 종료 후 게임 시작
+	void StartGame();
 };
 
 

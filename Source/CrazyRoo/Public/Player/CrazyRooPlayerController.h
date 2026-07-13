@@ -10,6 +10,7 @@ class UInputMappingContext;
 class UUserWidget;
 class URailInputConfig; //이름 변경 할 수도? 일단 테스트
 class ASharedCharacterManager; //이름 변경 할 수도? 일단 테스트
+class UCrazyRooCountdownWidget; // [한길] 0711 카운트다운 위젯
 enum class ECrazyRooPlayerRole : uint8;
 struct FInputActionValue; // 테스트용 앞 뒤 움직임.
 
@@ -154,4 +155,12 @@ protected:
 	void InputMove(const FInputActionValue& Value);
 	UFUNCTION(Server, Unreliable)
 	void Server_RequestMove(float AxisValue);
+
+	// [한길] 카운트 다운 위젯 (에디터에서 WBP_Countdown을 지정합니다.)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "CrazyRoo|UI")
+	TSubclassOf<UCrazyRooCountdownWidget> CountdownWidgetClass;
+
+	// 현재 화면에 생성된 카운트다운 위젯입니다.
+	UPROPERTY()
+	TObjectPtr<UCrazyRooCountdownWidget> CountdownWidget;
 };
