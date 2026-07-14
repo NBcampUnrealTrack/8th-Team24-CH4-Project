@@ -10,7 +10,7 @@
 
 namespace
 {
-FString GetBGMTypeName(ECrazyRooBGMType BGMType)
+FString GetAudioNetBGMTypeName(ECrazyRooBGMType BGMType)
 {
 	if (const UEnum* Enum = StaticEnum<ECrazyRooBGMType>())
 	{
@@ -20,7 +20,7 @@ FString GetBGMTypeName(ECrazyRooBGMType BGMType)
 	return TEXT("Unknown");
 }
 
-FString GetSFXTypeName(ECrazyRooSFXType SFXType)
+FString GetAudioNetSFXTypeName(ECrazyRooSFXType SFXType)
 {
 	if (const UEnum* Enum = StaticEnum<ECrazyRooSFXType>())
 	{
@@ -65,11 +65,11 @@ void ACrazyRooAudioNetManager::RequestPlayBGM(ECrazyRooBGMType BGMType)
 {
 	if (!HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] RequestPlayBGM ignored on non-authority: %s"), *GetBGMTypeName(BGMType));
+		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] RequestPlayBGM ignored on non-authority: %s"), *GetAudioNetBGMTypeName(BGMType));
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestPlayBGM: %s"), *GetBGMTypeName(BGMType));
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestPlayBGM: %s"), *GetAudioNetBGMTypeName(BGMType));
 	MulticastPlayBGM(BGMType);
 }
 
@@ -77,17 +77,17 @@ void ACrazyRooAudioNetManager::RequestPlaySFXAtLocation(ECrazyRooSFXType SFXType
 {
 	if (!HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] RequestPlaySFXAtLocation ignored on non-authority: %s"), *GetSFXTypeName(SFXType));
+		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] RequestPlaySFXAtLocation ignored on non-authority: %s"), *GetAudioNetSFXTypeName(SFXType));
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestPlaySFXAtLocation: %s"), *GetSFXTypeName(SFXType));
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestPlaySFXAtLocation: %s"), *GetAudioNetSFXTypeName(SFXType));
 	MulticastPlaySFXAtLocation(SFXType, Location);
 }
 
 void ACrazyRooAudioNetManager::MulticastPlayBGM_Implementation(ECrazyRooBGMType BGMType)
 {
-	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] MulticastPlayBGM: %s"), *GetBGMTypeName(BGMType));
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] MulticastPlayBGM: %s"), *GetAudioNetBGMTypeName(BGMType));
 
 	if (GetNetMode() == NM_DedicatedServer)
 	{
@@ -105,7 +105,7 @@ void ACrazyRooAudioNetManager::MulticastPlayBGM_Implementation(ECrazyRooBGMType 
 
 void ACrazyRooAudioNetManager::MulticastPlaySFXAtLocation_Implementation(ECrazyRooSFXType SFXType, FVector Location)
 {
-	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] MulticastPlaySFXAtLocation: %s"), *GetSFXTypeName(SFXType));
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] MulticastPlaySFXAtLocation: %s"), *GetAudioNetSFXTypeName(SFXType));
 
 	if (GetNetMode() == NM_DedicatedServer)
 	{

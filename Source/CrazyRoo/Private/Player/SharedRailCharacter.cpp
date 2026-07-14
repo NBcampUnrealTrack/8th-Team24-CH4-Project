@@ -10,6 +10,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Stage/RunnerDeathSequence.h"
 #include "Weapons/RailProjectile.h"
 #include "CrazyRoo.h"
 
@@ -629,6 +630,16 @@ void ASharedRailCharacter::HandlePlayerDeath()
 
 	UE_LOG(LogTemp, Error, TEXT("[SERVER] 플레이어 사망"));
 	Multicast_NotifyPlayerDeath();
+
+	UE_LOG(LogTemp, Log, TEXT("[SharedRailCharacter] Trigger RunnerDeathSequence"));
+	if (ARunnerDeathSequence* DeathSequence = ARunnerDeathSequence::FindDeathSequence(GetWorld()))
+	{
+		DeathSequence->StartDeathSequence(this);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[SharedRailCharacter] RunnerDeathSequence not found"));
+	}
 	// TODO: 이후 GameMode에 게임오버 알림 (결과 맵 이동 등)
 }
 
