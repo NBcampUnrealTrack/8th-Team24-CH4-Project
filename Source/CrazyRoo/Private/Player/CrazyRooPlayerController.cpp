@@ -171,6 +171,12 @@ void ACrazyRooPlayerController::SetupInputComponent()
 		{
 			EnhancedInput->BindAction(InputConfig->IA_CameraRight, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputCameraRight);
 		}
+		// [한길] 0714 QTE
+		if (InputConfig->IA_QTE)
+		{
+			// RailInputConfig에 지정된 QTE 입력을 G키 연타 처리 함수에 연결합니다.
+			EnhancedInput->BindAction(InputConfig->IA_QTE, ETriggerEvent::Started, this, &ACrazyRooPlayerController::InputQTE);
+		}
 		// [한길] 0703 테스트용 앞뒤 움직임
 		if (InputConfig->IA_Move)
 		{
@@ -383,6 +389,12 @@ void ACrazyRooPlayerController::InputCameraRight()
 	Server_RequestRotateCameraRight();
 }
 
+void ACrazyRooPlayerController::InputQTE()
+{
+	// 클라이언트 입력을 서버 권위의 QTE 처리로 전달합니다.
+	Server_RequestQTEPress();
+}
+
 bool ACrazyRooPlayerController::GetMouseAimRay(FVector& OutOrigin, FVector& OutDirection) const
 {
 	if (!DeprojectMousePositionToWorld(OutOrigin, OutDirection))
@@ -463,6 +475,16 @@ void ACrazyRooPlayerController::Server_RequestFireAimRay_Implementation(
 	{
 		// [한길] 0710 발사방식 선택모드로 인한 변경.
 		Manager->RequestFireAimRay(GetMyRoleOnServer(), AimOrigin, AimDirection, this);
+	}
+}
+
+
+void ACrazyRooPlayerController::Server_RequestQTEPress_Implementation()
+{
+	if (ASharedCharacterManager* Manager = GetManagerOnServer())
+	{
+		// 서버에서 현재 플레이어 역할 기준으로 QTE 카운트를 누적합니다.
+		Manager->RequestQTEPress(GetMyRoleOnServer());
 	}
 }
 

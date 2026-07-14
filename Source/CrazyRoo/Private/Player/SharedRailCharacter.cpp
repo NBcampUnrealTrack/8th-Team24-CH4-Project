@@ -215,6 +215,17 @@ void ASharedRailCharacter::MoveRight()
     UE_LOG(LogTemp, Warning, TEXT("MoveRight / CurrentLane: %d"), CurrentLane);
 }
 
+void ASharedRailCharacter::MoveToCenterLane()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	CurrentLane = 1;
+	UE_LOG(LogTemp, Warning, TEXT("MoveToCenterLane / CurrentLane: %d"), CurrentLane);
+}
+
 void ASharedRailCharacter::DoJump()
 {
     if (!HasAuthority())
@@ -701,6 +712,14 @@ void ASharedRailCharacter::Multicast_PlayPunchMontage_Implementation()
 	if (PunchMontage)
 	{
 		PlayAnimMontage(PunchMontage);
+	}
+}
+
+void ASharedRailCharacter::Multicast_PlayQTEPunchMontage_Implementation()
+{
+	if (QTEPunchMontage)
+	{
+		PlayAnimMontage(QTEPunchMontage);
 	}
 }
 

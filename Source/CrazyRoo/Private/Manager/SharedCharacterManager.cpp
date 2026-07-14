@@ -9,6 +9,7 @@
 #include "Cornering/TurnJudgeBox.h"
 #include "Enemies/FlyingEnemySpawner.h"
 #include "Enemies/FlyingEnemy.h"
+#include "Obstacles/GroupQTEBreakableWall.h"
 #include "Obstacles/RunnerObstacleSpawner.h"
 #include "Obstacles/RunnerObstacle.h"
 #include "TimerManager.h"
@@ -263,6 +264,54 @@ void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole,
 
 	// [한길] 0710 발사 방식에 따라 발사 수행.
 	SharedCharacter->FireBySelectedMode(AimOrigin, AimDirection, ShooterController);
+}
+
+// [한길] 0714 QTE
+void ASharedCharacterManager::RegisterActiveQTEWall(AGroupQTEBreakableWall* Wall)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// 이후 들어오는 QTE 입력을 이 벽 액터로 전달합니다.
+	ActiveQTEWall = Wall;
+}
+
+void ASharedCharacterManager::UnregisterActiveQTEWall(AGroupQTEBreakableWall* Wall)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (ActiveQTEWall == Wall)
+	{
+		// 완료/실패한 QTE 벽은 더 이상 입력을 받지 않도록 비웁니다.
+		ActiveQTEWall = nullptr;
+	}
+}
+
+void ASharedCharacterManager::RequestQTEPress(ECrazyRooPlayerRole RequestRole)
+{
+	if (!HasAuthority() || !ActiveQTEWall)
+	{
+		return;
+	}
+
+	if (RequestRole == ECrazyRooPlayerRole::None)
+	{
+		if (!bIgnorePlayerRole)
+		{
+			return;
+		}
+
+		// 테스트 모드에서는 역할이 없어도 혼자 QTE를 확인할 수 있게 임시 역할로 기록합니다.
+		RequestRole = ECrazyRooPlayerRole::P_Shooter;
+	}
+
+	// QTE 입력은 러너 일반 입력 잠금 중에도 허용합니다.
+	ActiveQTEWall->HandleQTEPress(RequestRole);
 }
 
 ATurnJudgeBox* ASharedCharacterManager::FindActiveTurnJudgeBox() const

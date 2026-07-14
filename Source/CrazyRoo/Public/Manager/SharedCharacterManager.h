@@ -16,6 +16,7 @@ class AFlyingEnemySpawner;
 class AFlyingEnemy;
 class ARunnerObstacleSpawner;
 class ARunnerObstacle;
+class AGroupQTEBreakableWall;
 
 UCLASS()
 class CRAZYROO_API ASharedCharacterManager :public AActor
@@ -48,11 +49,24 @@ public:
 	void RequestRotateCameraLeft(ECrazyRooPlayerRole RequestRole);
 	void RequestRotateCameraRight(ECrazyRooPlayerRole RequestRole);
 	void RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection, AController* ShooterController);
+	// [한길] 0714 QTE
+	// QTE 벽이 시작될 때 자신을 Manager에 등록함.
+	void RegisterActiveQTEWall(AGroupQTEBreakableWall* Wall);
+	// QTE 성공/실패 후 현재 활성 QTE 벽 등록을 해제함.
+	void UnregisterActiveQTEWall(AGroupQTEBreakableWall* Wall);
+	// PlayerController에서 넘어온 G키 입력을 현재 활성 QTE 벽으로 전달함.
+	// 일반 입력 잠금 상태(bRunnerInputLocked)여도 QTE 입력은 허용함.
+	// QTE 중에는 이동/점프/사격 등은 막히지만 G키 연타는 받아야 하기 때문.
+	void RequestQTEPress(ECrazyRooPlayerRole RequestRole);
 
 protected:
 	// 맵에 배치된 BP_SharedRailCharacter를 저장
 	UPROPERTY()
 	ASharedRailCharacter* SharedCharacter = nullptr;
+
+	// [한길] 0714 현재 진행중인 QTE 벽을 저장하는 포인터.
+	UPROPERTY()
+	AGroupQTEBreakableWall* ActiveQTEWall = nullptr;
 
 	// [한길] 0703 코너링 시스템.
 	// 현재 SharedCharacter가 들어가 있는 TurnJudgeBox를 찾습니다.

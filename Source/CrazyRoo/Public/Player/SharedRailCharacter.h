@@ -97,6 +97,14 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayPunchMontage();
 
+	// QTE 입력 성공 시 재생할 전용 몽타주입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation|QTE")
+	UAnimMontage* QTEPunchMontage;
+
+	// QTE 전용 몽타주를 모든 클라이언트에서 재생합니다.
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayQTEPunchMontage();
+
 	// 무적 상태 해제
 	void ResetInvincibility();
 
@@ -105,6 +113,9 @@ public:
 
 	// 오른쪽 레일로 이동
 	void MoveRight();
+
+	// 현재 레인을 가운데 레인으로 되돌립니다.
+	void MoveToCenterLane();
 
 	// 점프
 	void DoJump();

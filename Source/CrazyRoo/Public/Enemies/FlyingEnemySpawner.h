@@ -112,6 +112,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Enemy Spawn")
 	void StopSpawning();
 
+	// [한길] 0714 QTE시 스폰 중단기능위해 추가.
+	UFUNCTION(BlueprintPure, Category = "Enemy Spawn")
+	bool IsSpawning() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Enemy Spawn")
 	AFlyingEnemy* SpawnOnce();
 

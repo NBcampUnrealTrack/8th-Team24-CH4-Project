@@ -72,6 +72,12 @@ void AFlyingEnemySpawner::StopSpawning()
 	}
 }
 
+bool AFlyingEnemySpawner::IsSpawning() const
+{
+	UWorld* World = GetWorld();
+	return World && World->GetTimerManager().IsTimerActive(SpawnTimerHandle);
+}
+
 AFlyingEnemy* AFlyingEnemySpawner::SpawnOnce()
 {
 	// 스폰은 서버 전용. 클라에 배치된 스포너는 아무것도 하지 않는다
