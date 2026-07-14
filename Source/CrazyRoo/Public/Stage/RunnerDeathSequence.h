@@ -55,6 +55,9 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayDeathSequence(FTransform CageSpawnTransform, FTransform DeathCameraTransform);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Death Sequence")
+	void BP_OnLocalDeathSequenceStarted();
+
 	void StopRunnerSystems(ASharedRailCharacter* DeadCharacter);
 	void HideSharedCharacter(ASharedRailCharacter* DeadCharacter) const;
 	void PlayLocalDeathSequence(const FTransform& CageSpawnTransform, const FTransform& DeathCameraTransform);
