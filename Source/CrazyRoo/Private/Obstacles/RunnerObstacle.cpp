@@ -2,6 +2,7 @@
 
 #include "Obstacles/RunnerObstacle.h"
 
+#include "Audio/CrazyRooAudioNetManager.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -162,7 +163,11 @@ void ARunnerObstacle::HandleDeath()
 	Multicast_PlayDestruction();
 
 	// 서버 + 모든 클라이언트에서 파괴 사운드 즉시 재생
-	MulticastPlayDestroySound(GetActorLocation());
+	UE_LOG(LogTemp, Log, TEXT("[RunnerObstacle] Request ObstacleDestroy SFX"));
+	if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(GetWorld()))
+	{
+		AudioNetManager->RequestPlaySFXAtLocation(ECrazyRooSFXType::ObstacleDestroy, GetActorLocation());
+	}
 
 	OnObstacleDestroyed.Broadcast(this);
 

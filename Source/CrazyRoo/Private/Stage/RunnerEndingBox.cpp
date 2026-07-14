@@ -2,6 +2,7 @@
 
 #include "Stage/RunnerEndingBox.h"
 
+#include "Audio/CrazyRooAudioNetManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Camera/CameraActor.h"
 #include "Components/BoxComponent.h"
@@ -65,6 +66,12 @@ void ARunnerEndingBox::HandleEndingBoxBeginOverlap(UPrimitiveComponent* Overlapp
 	bHasTriggered = true;
 
 	ASharedRailCharacter* SharedCharacter = ResolveSharedRailCharacter(OtherActor);
+	UE_LOG(LogTemp, Log, TEXT("[RunnerEndingBox] Request StageClear BGM"));
+	if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(GetWorld()))
+	{
+		AudioNetManager->RequestPlayBGM(ECrazyRooBGMType::StageClear);
+	}
+
 	StopRunnerSystems(SharedCharacter);
 	HideSharedCharacter(SharedCharacter);
 
