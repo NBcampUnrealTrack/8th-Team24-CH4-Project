@@ -485,8 +485,10 @@ void ASharedRailCharacter::ApplyCornerTurn(float YawDelta)
 	{
 		SpringArm->SetWorldRotation(SavedSpringArmWorldRotation);
 
-		// 현재 카메라 yaw 값도 유지된 값으로 맞춰줍니다.
-		TargetCameraYaw = SpringArm->GetRelativeRotation().Yaw;
+		// [한길] 0714 카메라 회전 오류 해결.
+		// 보간 중인 SpringArm 현재값을 목표값으로 저장하지 않고,
+		// 캐릭터 회전량만큼 목표 yaw를 보정해 카메라 월드 방향을 유지합니다.
+		TargetCameraYaw = FRotator::NormalizeAxis(TargetCameraYaw - YawDelta);
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Corner Turn Applied Character Only : %f"), YawDelta);
@@ -543,7 +545,8 @@ void ASharedRailCharacter::FinishCornerSnapTurn()
 	if (SpringArm)
 	{
 		SpringArm->SetWorldRotation(SavedSpringArmWorldRotation);
-		TargetCameraYaw = SpringArm->GetRelativeRotation().Yaw;
+		// [한길] 0714 카메라 회전 오류 해결.
+		TargetCameraYaw = FRotator::NormalizeAxis(TargetCameraYaw - PendingCornerYawDelta);
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Corner Turn Applied At SnapPoint : %f / SnapLocation: %s"), PendingCornerYawDelta, *CornerSnapTargetLocation.ToString());
