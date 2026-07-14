@@ -695,6 +695,15 @@ void ASharedRailCharacter::SetMoveMode(ERunnerMoveMode NewMoveMode)
 	UE_LOG(LogTemp, Warning, TEXT("MoveMode Changed: %d"), static_cast<uint8>(MoveMode));
 }
 
+void ASharedRailCharacter::Multicast_PlayPunchMontage_Implementation()
+{
+	// 멀티캐스트 구현부: 여기서 실제 몽타주 재생
+	if (PunchMontage)
+	{
+		PlayAnimMontage(PunchMontage);
+	}
+}
+
 void ASharedRailCharacter::ResetInvincibility()
 {
 	if (HasAuthority())
@@ -715,6 +724,9 @@ void ASharedRailCharacter::FireBySelectedMode(
 	{
 		return;
 	}
+
+	// 모든 클라이언트 화면에서 펀치 애니메이션이 보이도록 호출
+	Multicast_PlayPunchMontage();
 
 	switch (FireMode)
 	{

@@ -89,6 +89,14 @@ public:
 
 	FTimerHandle InvincibilityTimerHandle;
 
+	// 에디터에서 방금 만든 UpperBody 펀치 몽타주를 할당할 변수
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
+	UAnimMontage* PunchMontage;
+
+	// 몽타주를 모든 클라이언트에서 재생하기 위한 멀티캐스트 함수 선언
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayPunchMontage();
+
 	// 무적 상태 해제
 	void ResetInvincibility();
 
