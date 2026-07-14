@@ -74,10 +74,10 @@ public:
 
 	// ── 플레이어(공유 캐릭터) 체력 ──
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HP", meta=(ClampMin="1.0"))
-	float MaxPlayerHP = 2.f;
+	float MaxPlayerHP = 10.f;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
-	float CurrentPlayerHP = 2.f;
+	float CurrentPlayerHP = 10.f;
 
 	// 무적 상태 복제 (나중에 클라이언트에서 피격 후 후처리 켤 때 사용)
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
