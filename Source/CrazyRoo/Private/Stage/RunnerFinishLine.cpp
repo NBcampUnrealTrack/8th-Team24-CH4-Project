@@ -2,6 +2,7 @@
 
 #include "Stage/RunnerFinishLine.h"
 
+#include "Audio/CrazyRooAudioNetManager.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "Enemies/FlyingEnemy.h"
@@ -65,6 +66,12 @@ void ARunnerFinishLine::HandleFinishLineBeginOverlap(UPrimitiveComponent* Overla
 	const FVector LeftLocation = LeftFireworkPoint ? LeftFireworkPoint->GetComponentLocation() : GetActorLocation();
 	const FVector RightLocation = RightFireworkPoint ? RightFireworkPoint->GetComponentLocation() : GetActorLocation();
 	StopEnemySystems();
+	const FVector FireworkSoundLocation = (LeftLocation + RightLocation) * 0.5f;
+	UE_LOG(LogTemp, Log, TEXT("[RunnerFinishLine] Request FinishFirework SFX"));
+	if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(GetWorld()))
+	{
+		AudioNetManager->RequestPlaySFXAtLocation(ECrazyRooSFXType::FinishFirework, FireworkSoundLocation);
+	}
 	MulticastPlayFireworks(LeftLocation, RightLocation);
 }
 
@@ -83,11 +90,7 @@ void ARunnerFinishLine::MulticastPlayFireworks_Implementation(FVector LeftLocati
 		}
 	}
 
-	if (FireworkSound)
-	{
-		const FVector SoundLocation = (LeftLocation + RightLocation) * 0.5f;
-		UGameplayStatics::PlaySoundAtLocation(this, FireworkSound, SoundLocation, FireworkSoundVolume, FireworkSoundPitch);
-	}
+	// Firework SFX is routed through ACrazyRooAudioNetManager on the server to avoid duplicate playback.
 }
 
 void ARunnerFinishLine::StopEnemySystems()
