@@ -145,6 +145,9 @@ void ARunnerDeathSequence::PlayLocalDeathSequence(const FTransform& /*CageSpawnT
 			PlayerController->SetViewTarget(DeathCamera);
 		}
 
+		UE_LOG(LogTemp, Log, TEXT("[RunnerDeathSequence] BP_OnLocalDeathSequenceStarted"));
+		BP_OnLocalDeathSequenceStarted();
+
 		if (DeathWidgetClass)
 		{
 			if (UUserWidget* DeathWidget = CreateWidget<UUserWidget>(PlayerController, DeathWidgetClass))
