@@ -206,6 +206,11 @@ void AGroupQTEBreakableWall::CompleteQTE()
 	ForceNetUpdate();
 	Multicast_HideQTEWidget(true);
 
+	if (ASharedRailCharacter* SharedCharacter = GetSharedCharacter())
+	{
+		SharedCharacter->Multicast_StopQTEPunchMontage();
+	}
+
 	if (ASharedCharacterManager* Manager = GetSharedCharacterManager())
 	{
 		Manager->UnregisterActiveQTEWall(this);
@@ -232,6 +237,11 @@ void AGroupQTEBreakableWall::FailQTE()
 	GetWorldTimerManager().ClearTimer(QTETimerHandle);
 	ForceNetUpdate();
 	Multicast_HideQTEWidget(false);
+
+	if (ASharedRailCharacter* SharedCharacter = GetSharedCharacter())
+	{
+		SharedCharacter->Multicast_StopQTEPunchMontage();
+	}
 
 	if (ASharedCharacterManager* Manager = GetSharedCharacterManager())
 	{

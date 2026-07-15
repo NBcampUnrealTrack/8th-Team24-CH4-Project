@@ -139,6 +139,10 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayQTEPunchMontage();
 
+	// QTE 종료 시 남은 펀치 몽타주와 예약된 콤보 입력을 정리합니다.
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_StopQTEPunchMontage();
+
 	// QTE 펀치 몽타주에서 실제 펀치 구간으로 사용할 Section 이름입니다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation|QTE")
 	TArray<FName> QTEPunchComboSections;
