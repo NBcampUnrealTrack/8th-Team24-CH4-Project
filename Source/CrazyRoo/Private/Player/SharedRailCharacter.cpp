@@ -6,6 +6,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
 #include "Engine/EngineTypes.h"
 #include "TimerManager.h"
@@ -798,6 +799,17 @@ void ASharedRailCharacter::Multicast_PlayQTEPunchMontage_Implementation()
 		CurrentQTEPunchComboIndex = INDEX_NONE;
 		PlayNextQTEPunchComboSection();
 	}
+}
+
+void ASharedRailCharacter::Multicast_StopQTEPunchMontage_Implementation()
+{
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (AnimInstance && QTEPunchMontage && AnimInstance->Montage_IsPlaying(QTEPunchMontage))
+	{
+		AnimInstance->Montage_Stop(0.15f, QTEPunchMontage);
+	}
+
+	ResetQTEPunchComboState();
 }
 
 void ASharedRailCharacter::HandleQTEPunchComboCheck()
