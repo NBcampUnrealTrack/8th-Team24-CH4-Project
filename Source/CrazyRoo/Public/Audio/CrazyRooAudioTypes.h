@@ -28,7 +28,8 @@ enum class ECrazyRooSFXType : uint8
 	EnemyHit UMETA(DisplayName = "Enemy Hit"),
 	EnemyAttack UMETA(DisplayName = "Enemy Attack"),
 	CageClose UMETA(DisplayName = "Cage Close"),
-	UIButtonClick UMETA(DisplayName = "UI Button Click")
+	UIButtonClick UMETA(DisplayName = "UI Button Click"),
+	TreeFall UMETA(DisplayName = "Tree Fall")
 };
 
 USTRUCT(BlueprintType)
