@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "Player/CrazyRooPlayerState.h"
 #include "CrazyRooGameState.generated.h"
 
 /**
@@ -11,6 +12,7 @@
  */
 
 enum class ECrazyRooStageState : uint8;
+
 
 // UI 가 바인딩할 델리게이트 — MatchState 가 바뀌면 알림
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooMapChanged, FName, NewMapId);
@@ -45,6 +47,13 @@ public:
 
 	// 서버가 캐러셀 인덱스를 바꿀 때 쓰는 함수
 	void SetCarouselIndex(int32 NewIndex);
+
+	// 로비 인원 변동(입장/퇴장) 시 UI가 구독할 이벤트
+	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo")
+	FOnLobbyStateChanged OnLobbyPlayersChanged;
+
+	virtual void AddPlayerState(APlayerState* PlayerState) override;
+	virtual void RemovePlayerState(APlayerState* PlayerState) override;
 
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentMapId)

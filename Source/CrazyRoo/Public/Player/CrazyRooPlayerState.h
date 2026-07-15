@@ -6,6 +6,10 @@
 #include "CrazyRooPlayerState.generated.h"
 
 enum class ECrazyRooPlayerRole : uint8;
+
+// 로비 상태(역할/준비)가 바뀌면 UI에 알림
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLobbyStateChanged);
+
 UCLASS()
 class CRAZYROO_API ACrazyRooPlayerState : public APlayerState
 {
@@ -46,6 +50,10 @@ public:
 	// [Server Only] 방장 권한 및 준비 상태 설정
 	void SetIsHost(bool bNew);
 	void SetIsReady(bool bNew);
+
+	// 역할/준비 상태 변경 시 UI가 구독할 이벤트
+	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo")
+	FOnLobbyStateChanged OnLobbyStateChanged;
 
 protected:
 	// 내 역할 변수입니다.

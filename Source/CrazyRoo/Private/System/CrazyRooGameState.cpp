@@ -66,6 +66,18 @@ void ACrazyRooGameState::SetCarouselIndex(int32 NewIndex)
 	}
 }
 
+void ACrazyRooGameState::AddPlayerState(APlayerState* PlayerState)
+{
+	Super::AddPlayerState(PlayerState);
+	OnLobbyPlayersChanged.Broadcast();
+}
+
+void ACrazyRooGameState::RemovePlayerState(APlayerState* PlayerState)
+{
+	Super::RemovePlayerState(PlayerState);
+	OnLobbyPlayersChanged.Broadcast();
+}
+
 void ACrazyRooGameState::OnRep_CarouselIndex()
 {
 	// 클라이언트 UI 업데이트를 위해 브로드캐스트
