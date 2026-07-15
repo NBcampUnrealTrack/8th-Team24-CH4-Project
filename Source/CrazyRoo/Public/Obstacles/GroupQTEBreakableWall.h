@@ -104,6 +104,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category="QTE", meta=(ClampMin="1"))
 	int32 RequiredTotalPressCount = 30;
 
+	// 플레이어 수별 목표 입력 수입니다. Index 0은 1명, Index 1은 2명 기준입니다.
+	// 비워두면 RequiredTotalPressCount 수동 설정값을 그대로 사용합니다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="QTE")
+	TArray<int32> RequiredPressCountByPlayerCount;
+
 	// 입력을 받기 전 카메라/UI를 보여주는 준비 시간입니다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="QTE", meta=(ClampMin="0.0", Units="s"))
 	float PreparationDuration = 3.0f;
@@ -137,7 +142,7 @@ protected:
 
 	// QTE 입력 중 캐릭터 애니메이션이 너무 자주 끊기지 않도록 재생 간격을 제한합니다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="QTE|Feedback", meta=(ClampMin="0.0", Units="s"))
-	float QTEPunchAnimationCooldown = 0.15f;
+	float QTEPunchAnimationCooldown = 0.0f;
 
 	UPROPERTY(ReplicatedUsing=OnRep_QTEActive, BlueprintReadOnly, Category="QTE")
 	bool bQTEActive = false;
@@ -237,6 +242,10 @@ protected:
 	void SwitchToQTECamera();
 	void RestoreGameplayCamera();
 	void SetQTEState(EGroupQTEState NewState);
+	// 현재 접속한 플레이어 수에 맞춰 RequiredTotalPressCount를 갱신합니다.
+	void ApplyRequiredPressCountByPlayerCount();
+	// QTE 목표 입력 수 계산에 사용할 현재 플레이어 수를 구합니다.
+	int32 GetQTEPlayerCount() const;
 	void UpdateProgressStage();
 	void TryPlayQTEPunchAnimation();
 	void InitializeWallVisuals();

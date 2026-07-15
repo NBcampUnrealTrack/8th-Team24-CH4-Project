@@ -2,7 +2,9 @@
 
 #include "Player/SharedRailCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Animation/AnimInstance.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
 #include "Engine/EngineTypes.h"
@@ -40,9 +42,18 @@ ASharedRailCharacter::ASharedRailCharacter()
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(SpringArm);
 
-    FollowCamera->bUsePawnControlRotation = false;
+	FollowCamera->bUsePawnControlRotation = false;
 
 	Tags.Add(TEXT("Player"));//스포너에 충돌과 피격판정을 태그로 검사해서 추가
+
+	// QTE 몽타주 안에서 순서대로 재생할 기본 펀치 Section 이름입니다.
+	QTEPunchComboSections =
+	{
+		TEXT("Punch_L_1"),
+		TEXT("Punch_R_1"),
+		TEXT("Punch_L_2"),
+		TEXT("Punch_R_2")
+	};
 }
 
 void ASharedRailCharacter::BeginPlay()
@@ -224,6 +235,25 @@ void ASharedRailCharacter::MoveToCenterLane()
 
 	CurrentLane = 1;
 	UE_LOG(LogTemp, Warning, TEXT("MoveToCenterLane / CurrentLane: %d"), CurrentLane);
+}
+
+void ASharedRailCharacter::StopMovementForQTE()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	StopJumping();
+	MoveMode = ERunnerMoveMode::Stop;
+
+	if (UCharacterMovementComponent* MovementComponent = GetCharacterMovement())
+	{
+		MovementComponent->StopMovementImmediately();
+		MovementComponent->Velocity = FVector::ZeroVector;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("StopMovementForQTE"));
 }
 
 void ASharedRailCharacter::DoJump()
@@ -746,10 +776,80 @@ void ASharedRailCharacter::Multicast_PlayPunchMontage_Implementation()
 
 void ASharedRailCharacter::Multicast_PlayQTEPunchMontage_Implementation()
 {
-	if (QTEPunchMontage)
+	if (!QTEPunchMontage || QTEPunchComboSections.IsEmpty())
+	{
+		return;
+	}
+
+	// G키 입력 1회를 펀치 1회로 예약합니다. 몽타주가 이미 재생 중이면 다음 Notify에서 이어서 처리합니다.
+	QueuedQTEPunchCount++;
+
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (!AnimInstance)
+	{
+		ResetQTEPunchComboState();
+		return;
+	}
+
+	if (!bIsPlayingQTEPunchCombo || !AnimInstance->Montage_IsPlaying(QTEPunchMontage))
 	{
 		PlayAnimMontage(QTEPunchMontage);
+		bIsPlayingQTEPunchCombo = true;
+		CurrentQTEPunchComboIndex = INDEX_NONE;
+		PlayNextQTEPunchComboSection();
 	}
+}
+
+void ASharedRailCharacter::HandleQTEPunchComboCheck()
+{
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (!AnimInstance || !QTEPunchMontage || !AnimInstance->Montage_IsPlaying(QTEPunchMontage))
+	{
+		ResetQTEPunchComboState();
+		return;
+	}
+
+	if (QueuedQTEPunchCount > 0)
+	{
+		// 예약된 G키 입력이 남아 있으면 다음 왼손/오른손 펀치 Section으로 이어갑니다.
+		PlayNextQTEPunchComboSection();
+		return;
+	}
+
+	// 더 이상 입력이 없으면 가드 복귀 Section으로 이동합니다.
+	if (QTEPunchGuardEndSection != NAME_None)
+	{
+		AnimInstance->Montage_JumpToSection(QTEPunchGuardEndSection, QTEPunchMontage);
+	}
+
+	ResetQTEPunchComboState();
+}
+
+void ASharedRailCharacter::PlayNextQTEPunchComboSection()
+{
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (!AnimInstance || !QTEPunchMontage || QTEPunchComboSections.IsEmpty() || QueuedQTEPunchCount <= 0)
+	{
+		return;
+	}
+
+	QueuedQTEPunchCount--;
+
+	// 마지막 펀치까지 간 뒤에도 입력이 계속 들어오면 다시 첫 번째 왼손 펀치부터 반복합니다.
+	CurrentQTEPunchComboIndex = (CurrentQTEPunchComboIndex + 1) % QTEPunchComboSections.Num();
+	const FName NextSectionName = QTEPunchComboSections[CurrentQTEPunchComboIndex];
+
+	if (NextSectionName != NAME_None)
+	{
+		AnimInstance->Montage_JumpToSection(NextSectionName, QTEPunchMontage);
+	}
+}
+
+void ASharedRailCharacter::ResetQTEPunchComboState()
+{
+	QueuedQTEPunchCount = 0;
+	CurrentQTEPunchComboIndex = INDEX_NONE;
+	bIsPlayingQTEPunchCombo = false;
 }
 
 void ASharedRailCharacter::ResetInvincibility()

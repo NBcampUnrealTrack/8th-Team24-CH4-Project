@@ -139,6 +139,18 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayQTEPunchMontage();
 
+	// QTE 펀치 몽타주에서 실제 펀치 구간으로 사용할 Section 이름입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation|QTE")
+	TArray<FName> QTEPunchComboSections;
+
+	// 더 이상 예약된 입력이 없을 때 돌아갈 가드 복귀 Section 이름입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation|QTE")
+	FName QTEPunchGuardEndSection = TEXT("GuardEnd");
+
+	// 펀치 Section 끝에 배치한 AnimNotify에서 호출하여 다음 콤보 입력을 처리합니다.
+	UFUNCTION(BlueprintCallable, Category = "Animation|QTE")
+	void HandleQTEPunchComboCheck();
+
 	// 무적 상태 해제
 	void ResetInvincibility();
 
@@ -150,6 +162,9 @@ public:
 
 	// 현재 레인을 가운데 레인으로 되돌립니다.
 	void MoveToCenterLane();
+
+	// QTE 진입 시 점프/낙하/잔여 이동 속도를 즉시 멈춥니다.
+	void StopMovementForQTE();
 
 	// 점프
 	void DoJump();
@@ -186,6 +201,14 @@ public:
 	// [한길] 0703 테스트용 앞뒤 움직임. 0706 자동 전진 / 수동 전진 구분.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Replicated, Category="Movement")
 	ERunnerMoveMode MoveMode = ERunnerMoveMode::Stop;
+
+	// AnimBP에서 현재 이동 모드를 읽기 위한 함수입니다.
+	UFUNCTION(BlueprintPure, Category="Movement")
+	ERunnerMoveMode GetMoveMode() const { return MoveMode; }
+
+	// 게임 시작 카운트다운/QTE처럼 정지 상태일 때 Idle 애니메이션으로 전환하기 위한 함수입니다.
+	UFUNCTION(BlueprintPure, Category="Movement")
+	bool IsMoveStopped() const { return MoveMode == ERunnerMoveMode::Stop; }
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Auto")
 	float AutoForwardMoveSpeed = 1400.f;
@@ -283,6 +306,21 @@ protected:
 	// 사망 처리 중복 방지
 	bool bPlayerDeathHandled = false;
 	float DebugLaneCenterTrackingLogElapsed = 0.0f;
+
+	// 아직 재생하지 않은 QTE 펀치 입력 수입니다.
+	int32 QueuedQTEPunchCount = 0;
+
+	// 현재 재생 중인 QTE 펀치 Section 인덱스입니다.
+	int32 CurrentQTEPunchComboIndex = INDEX_NONE;
+
+	// QTE 펀치 콤보 몽타주가 진행 중인지 확인하는 값입니다.
+	bool bIsPlayingQTEPunchCombo = false;
+
+	// 예약된 입력을 하나 소비하고 지정된 펀치 Section으로 이동합니다.
+	void PlayNextQTEPunchComboSection();
+
+	// QTE 펀치 콤보 상태를 초기화합니다.
+	void ResetQTEPunchComboState();
 
 // [한길] 0710 발사 방식 변경.
 public:
