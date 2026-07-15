@@ -91,6 +91,7 @@ void AGroupQTEBreakableWall::StartQTE()
 		return;
 	}
 
+	ApplyRequiredPressCountByPlayerCount();
 	SetQTEState(EGroupQTEState::Preparing);
 	CurrentTotalPressCount = 0;
 	CurrentProgressStage = 0;
@@ -103,6 +104,7 @@ void AGroupQTEBreakableWall::StartQTE()
 
 	if (ASharedRailCharacter* SharedCharacter = GetSharedCharacter())
 	{
+		SharedCharacter->StopMovementForQTE();
 		SharedCharacter->MoveToCenterLane();
 	}
 
@@ -204,6 +206,11 @@ void AGroupQTEBreakableWall::CompleteQTE()
 	ForceNetUpdate();
 	Multicast_HideQTEWidget(true);
 
+	if (ASharedRailCharacter* SharedCharacter = GetSharedCharacter())
+	{
+		SharedCharacter->Multicast_StopQTEPunchMontage();
+	}
+
 	if (ASharedCharacterManager* Manager = GetSharedCharacterManager())
 	{
 		Manager->UnregisterActiveQTEWall(this);
@@ -230,6 +237,11 @@ void AGroupQTEBreakableWall::FailQTE()
 	GetWorldTimerManager().ClearTimer(QTETimerHandle);
 	ForceNetUpdate();
 	Multicast_HideQTEWidget(false);
+
+	if (ASharedRailCharacter* SharedCharacter = GetSharedCharacter())
+	{
+		SharedCharacter->Multicast_StopQTEPunchMontage();
+	}
 
 	if (ASharedCharacterManager* Manager = GetSharedCharacterManager())
 	{
@@ -550,6 +562,55 @@ void AGroupQTEBreakableWall::SetQTEState(EGroupQTEState NewState)
 	BP_OnQTEStateChanged(QTEState);
 }
 
+void AGroupQTEBreakableWall::ApplyRequiredPressCountByPlayerCount()
+{
+	if (!HasAuthority() || RequiredPressCountByPlayerCount.IsEmpty())
+	{
+		return;
+	}
+
+	// 배열 규칙: 1명은 Index 0, 2명은 Index 1, 3명은 Index 2를 사용합니다.
+	// 배열보다 플레이어 수가 많으면 마지막 값을 사용해서 설정 누락으로 인한 실패를 막습니다.
+	const int32 PlayerCount = GetQTEPlayerCount();
+	const int32 TargetIndex = FMath::Clamp(PlayerCount - 1, 0, RequiredPressCountByPlayerCount.Num() - 1);
+	const int32 NewRequiredPressCount = RequiredPressCountByPlayerCount[TargetIndex];
+
+	if (NewRequiredPressCount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[QTE] PlayerCount target ignored: PlayerCount=%d Index=%d Value=%d"),
+			PlayerCount,
+			TargetIndex,
+			NewRequiredPressCount);
+		return;
+	}
+
+	RequiredTotalPressCount = NewRequiredPressCount;
+	UE_LOG(LogTemp, Warning, TEXT("[QTE] Required count set by player count: PlayerCount=%d Required=%d"),
+		PlayerCount,
+		RequiredTotalPressCount);
+}
+
+int32 AGroupQTEBreakableWall::GetQTEPlayerCount() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return 1;
+	}
+
+	int32 PlayerCount = 0;
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (It->Get())
+		{
+			PlayerCount++;
+		}
+	}
+
+	// 테스트 중 PlayerController를 아직 못 찾는 경우에도 최소 1명 기준으로 계산합니다.
+	return FMath::Max(1, PlayerCount);
+}
+
 void AGroupQTEBreakableWall::UpdateProgressStage()
 {
 	const int32 PreviousStage = CurrentProgressStage;
@@ -581,7 +642,8 @@ void AGroupQTEBreakableWall::TryPlayQTEPunchAnimation()
 	}
 
 	const float CurrentTime = World->GetTimeSeconds();
-	if (CurrentTime - LastQTEPunchAnimationTime < QTEPunchAnimationCooldown)
+	// 콤보 입력은 G키 입력 횟수만큼 예약되어야 하므로, 쿨타임을 0보다 크게 설정한 경우에만 입력 예약을 제한합니다.
+	if (QTEPunchAnimationCooldown > 0.0f && CurrentTime - LastQTEPunchAnimationTime < QTEPunchAnimationCooldown)
 	{
 		return;
 	}

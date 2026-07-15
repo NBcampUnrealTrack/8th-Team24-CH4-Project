@@ -11,6 +11,14 @@ class USpringArmComponent;
 class UCameraComponent;
 class ARailProjectile;
 
+// [서희] - 공유 체력 UI 연동을 위해 SharedRailCharacter의 HP 변수에 RepNotify와 UI용 이벤트를 추가하겠습니다.
+// 공유 캐릭터의 체력이 변경되었음을 UI에 알리는 이벤트 타입
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FOnPlayerHPChanged,
+	float, CurrentHP,
+	float, MaxHP
+);
+
 // [한길] 0706 자동전진 / 수동전진 0707 멈춤 추가.
 UENUM(BlueprintType)
 enum class ERunnerMoveMode : uint8
@@ -73,11 +81,37 @@ public:
 	float MuzzleHeight = 80.f;
 
 	// ── 플레이어(공유 캐릭터) 체력 ──
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HP", meta=(ClampMin="1.0"))
+	//[0715서희]=======================================================================
+	// ReplicatedUsing = OnRep_PlayerHP
+	//  - 서버의 값이 클라이언트로 복제된 뒤 OnRep_PlayerHP가 자동 호출됨
+	//
+	// MaxPlayerHP도 복제하는 이유
+	//  - QA 과정에서 최대 목숨이 3 → 5처럼 변경될 가능성이 있기 때문
+	UPROPERTY(
+		EditAnywhere,
+		BlueprintReadWrite,
+		ReplicatedUsing = OnRep_PlayerHP,
+		Category = "HP",
+		meta = (ClampMin = "1.0")
+	)
 	float MaxPlayerHP = 10.f;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
+	// 변경된 값이 클라이언트에 복제되면 OnRep_PlayerHP가 자동 호출됩니다.
+	UPROPERTY(
+		ReplicatedUsing = OnRep_PlayerHP,
+		BlueprintReadOnly,
+		Category = "HP"
+	)
 	float CurrentPlayerHP = 10.f;
+
+	// 블루프린트가 구독할 수 있는 체력 변경 이벤트
+	//
+	// WBP_InGameHUD에서:
+	// Bind Event to On Player HP Changed
+	// 노드로 구독할 수 있습니다.
+	UPROPERTY(BlueprintAssignable, Category = "HP")
+	FOnPlayerHPChanged OnPlayerHPChanged;
+	//================================================================================
 
 	// 무적 상태 복제 (나중에 클라이언트에서 피격 후 후처리 켤 때 사용)
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
@@ -105,6 +139,22 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayQTEPunchMontage();
 
+	// QTE 종료 시 남은 펀치 몽타주와 예약된 콤보 입력을 정리합니다.
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_StopQTEPunchMontage();
+
+	// QTE 펀치 몽타주에서 실제 펀치 구간으로 사용할 Section 이름입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation|QTE")
+	TArray<FName> QTEPunchComboSections;
+
+	// 더 이상 예약된 입력이 없을 때 돌아갈 가드 복귀 Section 이름입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation|QTE")
+	FName QTEPunchGuardEndSection = TEXT("GuardEnd");
+
+	// 펀치 Section 끝에 배치한 AnimNotify에서 호출하여 다음 콤보 입력을 처리합니다.
+	UFUNCTION(BlueprintCallable, Category = "Animation|QTE")
+	void HandleQTEPunchComboCheck();
+
 	// 무적 상태 해제
 	void ResetInvincibility();
 
@@ -116,6 +166,9 @@ public:
 
 	// 현재 레인을 가운데 레인으로 되돌립니다.
 	void MoveToCenterLane();
+
+	// QTE 진입 시 점프/낙하/잔여 이동 속도를 즉시 멈춥니다.
+	void StopMovementForQTE();
 
 	// 점프
 	void DoJump();
@@ -152,6 +205,14 @@ public:
 	// [한길] 0703 테스트용 앞뒤 움직임. 0706 자동 전진 / 수동 전진 구분.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Replicated, Category="Movement")
 	ERunnerMoveMode MoveMode = ERunnerMoveMode::Stop;
+
+	// AnimBP에서 현재 이동 모드를 읽기 위한 함수입니다.
+	UFUNCTION(BlueprintPure, Category="Movement")
+	ERunnerMoveMode GetMoveMode() const { return MoveMode; }
+
+	// 게임 시작 카운트다운/QTE처럼 정지 상태일 때 Idle 애니메이션으로 전환하기 위한 함수입니다.
+	UFUNCTION(BlueprintPure, Category="Movement")
+	bool IsMoveStopped() const { return MoveMode == ERunnerMoveMode::Stop; }
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Auto")
 	float AutoForwardMoveSpeed = 1400.f;
@@ -190,7 +251,17 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	//[서희]0715================================================
+	// 클라이언트가 서버에서 새로운 HP 값을 받았을 때 자동 호출됩니다.
+	// 이 함수 안에서 블루프린트용 OnPlayerHPChanged 이벤트를 발생시킵니다.
+	UFUNCTION()
+	void OnRep_PlayerHP();
 
+	// 현재 HP와 최대 HP를 OnPlayerHPChanged 이벤트로 전달합니다.
+	// 서버, 리슨 서버, 스탠드얼론 테스트에서도 동일하게 사용할 수 있도록
+	// 별도의 내부 함수로 분리했습니다.
+	void BroadcastPlayerHP();
+	//===========================================================
 	// 레플리케이션 변수 등록
 	virtual void GetLifetimeReplicatedProps(
 		TArray<FLifetimeProperty>& OutLifetimeProps
@@ -238,6 +309,21 @@ protected:
 	// 사망 처리 중복 방지
 	bool bPlayerDeathHandled = false;
 	float DebugLaneCenterTrackingLogElapsed = 0.0f;
+
+	// 아직 재생하지 않은 QTE 펀치 입력 수입니다.
+	int32 QueuedQTEPunchCount = 0;
+
+	// 현재 재생 중인 QTE 펀치 Section 인덱스입니다.
+	int32 CurrentQTEPunchComboIndex = INDEX_NONE;
+
+	// QTE 펀치 콤보 몽타주가 진행 중인지 확인하는 값입니다.
+	bool bIsPlayingQTEPunchCombo = false;
+
+	// 예약된 입력을 하나 소비하고 지정된 펀치 Section으로 이동합니다.
+	void PlayNextQTEPunchComboSection();
+
+	// QTE 펀치 콤보 상태를 초기화합니다.
+	void ResetQTEPunchComboState();
 
 // [한길] 0710 발사 방식 변경.
 public:
