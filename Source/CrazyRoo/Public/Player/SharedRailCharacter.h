@@ -11,6 +11,14 @@ class USpringArmComponent;
 class UCameraComponent;
 class ARailProjectile;
 
+// [서희] - 공유 체력 UI 연동을 위해 SharedRailCharacter의 HP 변수에 RepNotify와 UI용 이벤트를 추가하겠습니다.
+// 공유 캐릭터의 체력이 변경되었음을 UI에 알리는 이벤트 타입
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FOnPlayerHPChanged,
+	float, CurrentHP,
+	float, MaxHP
+);
+
 // [한길] 0706 자동전진 / 수동전진 0707 멈춤 추가.
 UENUM(BlueprintType)
 enum class ERunnerMoveMode : uint8
@@ -73,11 +81,37 @@ public:
 	float MuzzleHeight = 80.f;
 
 	// ── 플레이어(공유 캐릭터) 체력 ──
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HP", meta=(ClampMin="1.0"))
+	//[0715서희]=======================================================================
+	// ReplicatedUsing = OnRep_PlayerHP
+	//  - 서버의 값이 클라이언트로 복제된 뒤 OnRep_PlayerHP가 자동 호출됨
+	//
+	// MaxPlayerHP도 복제하는 이유
+	//  - QA 과정에서 최대 목숨이 3 → 5처럼 변경될 가능성이 있기 때문
+	UPROPERTY(
+		EditAnywhere,
+		BlueprintReadWrite,
+		ReplicatedUsing = OnRep_PlayerHP,
+		Category = "HP",
+		meta = (ClampMin = "1.0")
+	)
 	float MaxPlayerHP = 10.f;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
+	// 변경된 값이 클라이언트에 복제되면 OnRep_PlayerHP가 자동 호출됩니다.
+	UPROPERTY(
+		ReplicatedUsing = OnRep_PlayerHP,
+		BlueprintReadOnly,
+		Category = "HP"
+	)
 	float CurrentPlayerHP = 10.f;
+
+	// 블루프린트가 구독할 수 있는 체력 변경 이벤트
+	//
+	// WBP_InGameHUD에서:
+	// Bind Event to On Player HP Changed
+	// 노드로 구독할 수 있습니다.
+	UPROPERTY(BlueprintAssignable, Category = "HP")
+	FOnPlayerHPChanged OnPlayerHPChanged;
+	//================================================================================
 
 	// 무적 상태 복제 (나중에 클라이언트에서 피격 후 후처리 켤 때 사용)
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
@@ -190,6 +224,17 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	//[서희]0715================================================
+	// 클라이언트가 서버에서 새로운 HP 값을 받았을 때 자동 호출됩니다.
+	// 이 함수 안에서 블루프린트용 OnPlayerHPChanged 이벤트를 발생시킵니다.
+	UFUNCTION()
+	void OnRep_PlayerHP();
+
+	// 현재 HP와 최대 HP를 OnPlayerHPChanged 이벤트로 전달합니다.
+	// 서버, 리슨 서버, 스탠드얼론 테스트에서도 동일하게 사용할 수 있도록
+	// 별도의 내부 함수로 분리했습니다.
+	void BroadcastPlayerHP();
+	//===========================================================
 
 	// 레플리케이션 변수 등록
 	virtual void GetLifetimeReplicatedProps(

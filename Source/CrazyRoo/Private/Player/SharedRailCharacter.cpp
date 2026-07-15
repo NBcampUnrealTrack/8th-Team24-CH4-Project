@@ -576,9 +576,35 @@ void ASharedRailCharacter::GetLifetimeReplicatedProps(
     DOREPLIFETIME(ASharedRailCharacter, bIsSliding);
     DOREPLIFETIME(ASharedRailCharacter, TargetCameraYaw);
 	DOREPLIFETIME(ASharedRailCharacter, LaneCenterLocation);
+	// [서희]최대 체력도 모든 클라이언트에 복제합니다.
+	// 최대 목숨이 런타임 중 변경되어도 하트 개수가 갱신됩니다.
+	DOREPLIFETIME(ASharedRailCharacter, MaxPlayerHP);
 	DOREPLIFETIME(ASharedRailCharacter, CurrentPlayerHP);
 	DOREPLIFETIME(ASharedRailCharacter, bIsInvincible); // 무적 상태 동기화 추가
 	DOREPLIFETIME(ASharedRailCharacter, MoveMode); // 딜레이 스타트 위한 모드변경.
+}
+
+// ============================================================================
+// [서희]체력 복제 및 UI 알림
+// ============================================================================
+
+void ASharedRailCharacter::OnRep_PlayerHP()
+{
+	// 이 함수는 클라이언트가 서버로부터
+	// MaxPlayerHP 또는 CurrentPlayerHP의 새로운 값을 받았을 때 자동 호출됩니다.
+	//
+	// 데디케이티드 서버의 UI를 직접 건드리는 것이 아니라,
+	// 각 클라이언트에서 자신의 WBP_InGameHUD에 체력 변경을 알립니다.
+	BroadcastPlayerHP();
+}
+
+void ASharedRailCharacter::BroadcastPlayerHP()
+{
+	// 현재 체력과 최대 체력을 이벤트 구독자에게 전달합니다.
+	//
+	// WBP_InGameHUD가 OnPlayerHPChanged를 구독하고 있다면
+	// HandlePlayerHPChanged(CurrentPlayerHP, MaxPlayerHP)가 실행됩니다.
+	OnPlayerHPChanged.Broadcast(CurrentPlayerHP, MaxPlayerHP);
 }
 
 FVector ASharedRailCharacter::GetLaneCenterLocation() const
@@ -609,6 +635,9 @@ void ASharedRailCharacter::ApplyPlayerDamage(float Damage, AActor* DamageCauser,
 
 	// 체력 차감: FMath::Max를 사용해 체력이 음수로 내려가지 않도록 안전하게 계산
 	CurrentPlayerHP = FMath::Max(0.f, CurrentPlayerHP - Damage);
+
+	//[서희]추가
+	BroadcastPlayerHP();
 
 	// 피격 로그: 서버 디버깅을 위해 데미지 제공자와 남은 체력을 기록합니다.
 	UE_LOG(LogTemp, Warning, TEXT("[SERVER] 플레이어 피격! -%.1f (원인: %s) → HP %.1f / %.1f"),
