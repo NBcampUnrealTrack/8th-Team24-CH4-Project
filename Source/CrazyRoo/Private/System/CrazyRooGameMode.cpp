@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "System/CrazyRooGameMode.h"
+#include "Audio/CrazyRooAudioNetManager.h"
 #include "Types/CrazyRooTypes.h"
 #include "CrazyRoo.h"
 #include "System/CrazyRooGameState.h"
@@ -10,6 +11,37 @@
 #include "System/CrazyRooGameInstance.h"
 #include "Manager/SharedCharacterManager.h"
 #include "TimerManager.h"
+
+namespace
+{
+void RequestInGameBGM(UWorld* World)
+{
+	UE_LOG(LogTemp, Log, TEXT("[CrazyRooGameMode] Request InGame BGM"));
+	if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(World))
+	{
+		AudioNetManager->RequestPlayBGM(ECrazyRooBGMType::InGame);
+	}
+}
+
+void ScheduleInGameBGM(ACrazyRooGameMode* GameMode)
+{
+	if (!GameMode || !GameMode->GetWorld())
+	{
+		return;
+	}
+
+	FTimerHandle InGameBGMTimerHandle;
+	GameMode->GetWorldTimerManager().SetTimer(
+		InGameBGMTimerHandle,
+		[GameMode]()
+		{
+			RequestInGameBGM(GameMode->GetWorld());
+		},
+		0.1f,
+		false
+	);
+}
+}
 
 ACrazyRooGameMode::ACrazyRooGameMode()
 {
@@ -473,6 +505,7 @@ void ACrazyRooGameMode::HandleGameStartMode()
 		// 테스트 모드에서는 역할 배정을 무시하여 한 플레이어가 모든 조작을 확인할 수 있게 합니다.
 		SharedCharacterManager->SetIgnorePlayerRole(true);
 		SharedCharacterManager->StartManualMove();
+		ScheduleInGameBGM(this);
 		UE_LOG(LogCrazyRoo, Warning, TEXT("Game Start Mode: ManualTest"));
 		break;
 
@@ -482,6 +515,7 @@ void ACrazyRooGameMode::HandleGameStartMode()
 		// 테스트 모드에서는 역할 배정을 무시하여 한 플레이어가 모든 조작을 확인할 수 있게 합니다.
 		SharedCharacterManager->SetIgnorePlayerRole(true);
 		SharedCharacterManager->StartAutoMove();
+		ScheduleInGameBGM(this);
 		UE_LOG(LogCrazyRoo, Warning, TEXT("Game Start Mode: AutoMoveTest"));
 		break;
 
@@ -538,4 +572,5 @@ void ACrazyRooGameMode::StartGame()
 	// [한길] 0712
 	// Normal 모드의 카운트다운이 끝났을 때만 호출되는 실제 게임 시작 처리입니다.
 	SharedCharacterManager->StartAutoMove();
+	ScheduleInGameBGM(this);
 }
