@@ -74,10 +74,10 @@ public:
 
 	// ── 플레이어(공유 캐릭터) 체력 ──
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HP", meta=(ClampMin="1.0"))
-	float MaxPlayerHP = 2.f;
+	float MaxPlayerHP = 10.f;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
-	float CurrentPlayerHP = 2.f;
+	float CurrentPlayerHP = 10.f;
 
 	// 무적 상태 복제 (나중에 클라이언트에서 피격 후 후처리 켤 때 사용)
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="HP")
@@ -89,6 +89,22 @@ public:
 
 	FTimerHandle InvincibilityTimerHandle;
 
+	// 에디터에서 방금 만든 UpperBody 펀치 몽타주를 할당할 변수
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
+	UAnimMontage* PunchMontage;
+
+	// 몽타주를 모든 클라이언트에서 재생하기 위한 멀티캐스트 함수 선언
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayPunchMontage();
+
+	// QTE 입력 성공 시 재생할 전용 몽타주입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation|QTE")
+	UAnimMontage* QTEPunchMontage;
+
+	// QTE 전용 몽타주를 모든 클라이언트에서 재생합니다.
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayQTEPunchMontage();
+
 	// 무적 상태 해제
 	void ResetInvincibility();
 
@@ -97,6 +113,9 @@ public:
 
 	// 오른쪽 레일로 이동
 	void MoveRight();
+
+	// 현재 레인을 가운데 레인으로 되돌립니다.
+	void MoveToCenterLane();
 
 	// 점프
 	void DoJump();
@@ -157,6 +176,11 @@ public:
 	UFUNCTION(BlueprintPure, Category="HP")
 	bool IsPlayerDead() const { return CurrentPlayerHP <= 0.f; }
 	//
+
+	// [한길] 0713
+	// 캡슐 크기를 바꾸지 않고 슬라이딩 회피 판정에 사용할 현재 슬라이딩 상태입니다.
+	UFUNCTION(BlueprintPure, Category="Movement")
+	bool IsSliding() const { return bIsSliding; }
 
 	UFUNCTION(BlueprintPure, Category="Rail")
 	FVector GetLaneCenterLocation() const;

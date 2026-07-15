@@ -9,6 +9,7 @@
 #include "Cornering/TurnJudgeBox.h"
 #include "Enemies/FlyingEnemySpawner.h"
 #include "Enemies/FlyingEnemy.h"
+#include "Obstacles/GroupQTEBreakableWall.h"
 #include "Obstacles/RunnerObstacleSpawner.h"
 #include "Obstacles/RunnerObstacle.h"
 #include "TimerManager.h"
@@ -108,7 +109,7 @@ void ASharedCharacterManager::InitializeSharedCharacter()
 
 void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -142,7 +143,7 @@ void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
 
 void ASharedCharacterManager::RequestMoveRight(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -169,7 +170,7 @@ void ASharedCharacterManager::RequestMoveRight(ECrazyRooPlayerRole RequestRole)
 
 void ASharedCharacterManager::RequestJump(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -186,7 +187,7 @@ void ASharedCharacterManager::RequestJump(ECrazyRooPlayerRole RequestRole)
 
 void ASharedCharacterManager::RequestSlide(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -202,7 +203,7 @@ void ASharedCharacterManager::RequestSlide(ECrazyRooPlayerRole RequestRole)
 
 void ASharedCharacterManager::RequestFireToLocation(ECrazyRooPlayerRole RequestRole, const FVector& TargetLocation)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -218,7 +219,7 @@ void ASharedCharacterManager::RequestFireToLocation(ECrazyRooPlayerRole RequestR
 
 void ASharedCharacterManager::RequestRotateCameraLeft(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -234,7 +235,7 @@ void ASharedCharacterManager::RequestRotateCameraLeft(ECrazyRooPlayerRole Reques
 
 void ASharedCharacterManager::RequestRotateCameraRight(ECrazyRooPlayerRole RequestRole)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -250,7 +251,7 @@ void ASharedCharacterManager::RequestRotateCameraRight(ECrazyRooPlayerRole Reque
 
 void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin, const FVector& AimDirection, AController* ShooterController)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
@@ -263,6 +264,54 @@ void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole,
 
 	// [한길] 0710 발사 방식에 따라 발사 수행.
 	SharedCharacter->FireBySelectedMode(AimOrigin, AimDirection, ShooterController);
+}
+
+// [한길] 0714 QTE
+void ASharedCharacterManager::RegisterActiveQTEWall(AGroupQTEBreakableWall* Wall)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// 이후 들어오는 QTE 입력을 이 벽 액터로 전달합니다.
+	ActiveQTEWall = Wall;
+}
+
+void ASharedCharacterManager::UnregisterActiveQTEWall(AGroupQTEBreakableWall* Wall)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (ActiveQTEWall == Wall)
+	{
+		// 완료/실패한 QTE 벽은 더 이상 입력을 받지 않도록 비웁니다.
+		ActiveQTEWall = nullptr;
+	}
+}
+
+void ASharedCharacterManager::RequestQTEPress(ECrazyRooPlayerRole RequestRole)
+{
+	if (!HasAuthority() || !ActiveQTEWall)
+	{
+		return;
+	}
+
+	if (RequestRole == ECrazyRooPlayerRole::None)
+	{
+		if (!bIgnorePlayerRole)
+		{
+			return;
+		}
+
+		// 테스트 모드에서는 역할이 없어도 혼자 QTE를 확인할 수 있게 임시 역할로 기록합니다.
+		RequestRole = ECrazyRooPlayerRole::P_Shooter;
+	}
+
+	// QTE 입력은 러너 일반 입력 잠금 중에도 허용합니다.
+	ActiveQTEWall->HandleQTEPress(RequestRole);
 }
 
 ATurnJudgeBox* ASharedCharacterManager::FindActiveTurnJudgeBox() const
@@ -383,12 +432,22 @@ void ASharedCharacterManager::StopFlyingEnemiesForRunnerTurn()
 //[한길] 0703 테스트용 앞뒤 움직임.
 void ASharedCharacterManager::RequestMove(float AxisValue)
 {
-	if (!HasAuthority() || !SharedCharacter)
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
 	{
 		return;
 	}
 
 	SharedCharacter->DebugMoveForward(AxisValue);
+}
+
+void ASharedCharacterManager::SetRunnerInputLocked(bool bLocked)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bRunnerInputLocked = bLocked;
 }
 
 // [한길] 0712
@@ -446,6 +505,15 @@ void ASharedCharacterManager::HandlePlayerHitObstacle(ARunnerObstacle* Obstacle,
 	// 들어온 PlayerActor가 현재 조작중인 공유 캐릭터가 맞는지 확인
 	if (SharedCharacter && SharedCharacter == PlayerActor)
 	{
+		// [한길] 0713
+		// SlideRequired 장애물은 캡슐 크기를 줄이지 않고 슬라이딩 상태값으로 회피 판정합니다.
+		// 이렇게 하면 슬라이딩 중 캡슐 높이 변경으로 생기던 떨림을 피할 수 있습니다.
+		if (ActionType == ERunnerObstacleActionType::SlideRequired && SharedCharacter->IsSliding())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[MANAGER] SlideRequired 장애물 회피 성공"));
+			return;
+		}
+
 		// 상속받은 여러가지 Obstacle bp에서 데미지를 수정 가능
 		// [수정] 장애물 충돌은 기본값(false)이 들어가므로 1초 무적이 정상 적용됩니다.
 		SharedCharacter->ApplyPlayerDamage(Obstacle->GetObstacleDamage(), Obstacle, false);

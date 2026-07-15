@@ -10,6 +10,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Stage/RunnerDeathSequence.h"
 #include "Weapons/RailProjectile.h"
 #include "CrazyRoo.h"
 
@@ -214,6 +215,17 @@ void ASharedRailCharacter::MoveRight()
     UE_LOG(LogTemp, Warning, TEXT("MoveRight / CurrentLane: %d"), CurrentLane);
 }
 
+void ASharedRailCharacter::MoveToCenterLane()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	CurrentLane = 1;
+	UE_LOG(LogTemp, Warning, TEXT("MoveToCenterLane / CurrentLane: %d"), CurrentLane);
+}
+
 void ASharedRailCharacter::DoJump()
 {
     if (!HasAuthority())
@@ -239,8 +251,10 @@ void ASharedRailCharacter::DoSlide()
 
     bIsSliding = true;
 
-    // 슬라이딩 중에는 캡슐 높이를 낮춤
-    GetCapsuleComponent()->SetCapsuleHalfHeight(44.f);
+	// [한길] 0713
+	// 캡슐 높이를 직접 줄이면 레일 위치 보정/충돌 보정과 충돌해 캐릭터가 떨릴 수 있습니다.
+	// 따라서 캡슐 높이를 낮추는 코드를 삭제하였습니다.
+	// 슬라이딩은 bIsSliding 상태로만 판정하고, 시각 연출은 애니메이션이나 Mesh Offset으로 처리하면 좋을것 같습니다.
 
     // 0.8초 후 슬라이딩 종료
     GetWorldTimerManager().SetTimer(
@@ -289,8 +303,8 @@ void ASharedRailCharacter::EndSlide()
 
     bIsSliding = false;
 
-    // 캡슐 높이 원래대로 복구
-    GetCapsuleComponent()->SetCapsuleHalfHeight(88.f);
+	// [한길] 0713
+	// DoSlide에서 캡슐 높이를 바꾸지 않으므로 복구할 캡슐 값도 없습니다.
 
     UE_LOG(LogTemp,Warning,TEXT("SharedCharacter EndSlide"));
 }
@@ -482,8 +496,10 @@ void ASharedRailCharacter::ApplyCornerTurn(float YawDelta)
 	{
 		SpringArm->SetWorldRotation(SavedSpringArmWorldRotation);
 
-		// 현재 카메라 yaw 값도 유지된 값으로 맞춰줍니다.
-		TargetCameraYaw = SpringArm->GetRelativeRotation().Yaw;
+		// [한길] 0714 카메라 회전 오류 해결.
+		// 보간 중인 SpringArm 현재값을 목표값으로 저장하지 않고,
+		// 캐릭터 회전량만큼 목표 yaw를 보정해 카메라 월드 방향을 유지합니다.
+		TargetCameraYaw = FRotator::NormalizeAxis(TargetCameraYaw - YawDelta);
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Corner Turn Applied Character Only : %f"), YawDelta);
@@ -540,7 +556,8 @@ void ASharedRailCharacter::FinishCornerSnapTurn()
 	if (SpringArm)
 	{
 		SpringArm->SetWorldRotation(SavedSpringArmWorldRotation);
-		TargetCameraYaw = SpringArm->GetRelativeRotation().Yaw;
+		// [한길] 0714 카메라 회전 오류 해결.
+		TargetCameraYaw = FRotator::NormalizeAxis(TargetCameraYaw - PendingCornerYawDelta);
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Corner Turn Applied At SnapPoint : %f / SnapLocation: %s"), PendingCornerYawDelta, *CornerSnapTargetLocation.ToString());
@@ -627,6 +644,16 @@ void ASharedRailCharacter::HandlePlayerDeath()
 
 	UE_LOG(LogTemp, Error, TEXT("[SERVER] 플레이어 사망"));
 	Multicast_NotifyPlayerDeath();
+
+	UE_LOG(LogTemp, Log, TEXT("[SharedRailCharacter] Trigger RunnerDeathSequence"));
+	if (ARunnerDeathSequence* DeathSequence = ARunnerDeathSequence::FindDeathSequence(GetWorld()))
+	{
+		DeathSequence->StartDeathSequence(this);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[SharedRailCharacter] RunnerDeathSequence not found"));
+	}
 	// TODO: 이후 GameMode에 게임오버 알림 (결과 맵 이동 등)
 }
 
@@ -679,6 +706,23 @@ void ASharedRailCharacter::SetMoveMode(ERunnerMoveMode NewMoveMode)
 	UE_LOG(LogTemp, Warning, TEXT("MoveMode Changed: %d"), static_cast<uint8>(MoveMode));
 }
 
+void ASharedRailCharacter::Multicast_PlayPunchMontage_Implementation()
+{
+	// 멀티캐스트 구현부: 여기서 실제 몽타주 재생
+	if (PunchMontage)
+	{
+		PlayAnimMontage(PunchMontage);
+	}
+}
+
+void ASharedRailCharacter::Multicast_PlayQTEPunchMontage_Implementation()
+{
+	if (QTEPunchMontage)
+	{
+		PlayAnimMontage(QTEPunchMontage);
+	}
+}
+
 void ASharedRailCharacter::ResetInvincibility()
 {
 	if (HasAuthority())
@@ -699,6 +743,9 @@ void ASharedRailCharacter::FireBySelectedMode(
 	{
 		return;
 	}
+
+	// 모든 클라이언트 화면에서 펀치 애니메이션이 보이도록 호출
+	Multicast_PlayPunchMontage();
 
 	switch (FireMode)
 	{

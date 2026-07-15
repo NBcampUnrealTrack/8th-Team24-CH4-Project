@@ -2,6 +2,7 @@
 
 #include "Enemies/FlyingEnemy.h"
 
+#include "Audio/CrazyRooAudioNetManager.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -363,6 +364,13 @@ void AFlyingEnemy::ApplyDamage(float Damage, AActor* DamageCauser, const FVector
 
 	if (CurrentHP <= 0.0f)
 	{
+		const FVector HitSoundLocation = DamageLocation.ContainsNaN() ? GetActorLocation() : DamageLocation;
+		UE_LOG(LogTemp, Log, TEXT("[FlyingEnemy] Request EnemyHit SFX"));
+		if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(GetWorld()))
+		{
+			AudioNetManager->RequestPlaySFXAtLocation(ECrazyRooSFXType::EnemyHit, HitSoundLocation);
+		}
+
 		HandleDeath();
 	}
 }
@@ -414,7 +422,11 @@ void AFlyingEnemy::TriggerAttackHitPlayer()
 		return;
 	}
 
-	MulticastPlayAttackSound(GetActorLocation());
+	UE_LOG(LogTemp, Log, TEXT("[FlyingEnemy] Request EnemyAttack SFX"));
+	if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(GetWorld()))
+	{
+		AudioNetManager->RequestPlaySFXAtLocation(ECrazyRooSFXType::EnemyAttack, GetActorLocation());
+	}
 
 	OnFlyingEnemyAttackHitPlayer.Broadcast(this, TargetPlayer, AttackDamage);
 }
@@ -556,30 +568,10 @@ void AFlyingEnemy::MulticastPlayHitEffect_Implementation(FVector EffectLocation)
 		);
 	}
 
-	if (HitSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(
-			this,
-			HitSound,
-			EffectLocation,
-			HitSoundVolume,
-			HitSoundPitch
-		);
-	}
+	// Hit SFX is routed through ACrazyRooAudioNetManager on the server to avoid duplicate playback.
 }
 
 void AFlyingEnemy::MulticastPlayAttackSound_Implementation(FVector SoundLocation)
 {
-	if (!AttackSound)
-	{
-		return;
-	}
-
-	UGameplayStatics::PlaySoundAtLocation(
-		this,
-		AttackSound,
-		SoundLocation,
-		AttackSoundVolume,
-		AttackSoundPitch
-	);
+	// Attack SFX is routed through ACrazyRooAudioNetManager on the server to avoid duplicate playback.
 }

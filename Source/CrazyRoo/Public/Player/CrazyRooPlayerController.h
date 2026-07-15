@@ -119,6 +119,8 @@ protected:
 	void InputFire();
 	void InputCameraLeft();
 	void InputCameraRight();
+	// QTE 중 G키 입력을 서버로 전달합니다.
+	void InputQTE();
 
 	/** 클라 → 서버 조작 요청 RPC */
 	UFUNCTION(Server, Reliable)
@@ -141,6 +143,10 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void Server_RequestFireAimRay(FVector_NetQuantize AimOrigin, FVector_NetQuantizeNormal AimDirection);
+
+	// QTE 입력 카운트는 서버에서만 증가시키기 위해 RPC로 전달합니다.
+	UFUNCTION(Server, Reliable)
+	void Server_RequestQTEPress();
 
 	/** 마우스 화면 위치 → 월드 Ray 변환 */
 	bool GetMouseAimRay(FVector& OutOrigin, FVector& OutDirection) const;

@@ -50,6 +50,10 @@ public:
 	bool IsDevSoloStart() const;
 	// ★ [추가 끝] ────────────────────────────────────────────
 
+	// [한길] 0714 QTE후 기존 방식 그대로 플레이 이어나가게 설정.
+	/** 현재 게임플레이 시작 방식을 반환합니다. */
+	ECrazyRooGameStartMode GetGameStartMode() const { return GameStartMode; }
+
 protected:
 
 	// 다음 비어있는 역할 반환 (없으면 None)

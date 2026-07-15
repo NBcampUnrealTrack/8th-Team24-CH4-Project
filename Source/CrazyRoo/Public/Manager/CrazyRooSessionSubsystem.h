@@ -3,8 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Interfaces/OnlineSessionInterface.h"
+#include "Interfaces/OnlineSessionInterface.h" //Eos 로그인 인터페이스
 #include "CrazyRooSessionSubsystem.generated.h"
 
 // CrazyRoo 세션 서브시스템
@@ -13,6 +14,8 @@
 // - 클라: 방 검색(FindRooms) → 검색된 목록을 UI에 표시 → 유저가 클릭 시 참가(JoinRoomByIndex)
 // - 클라의 "방 생성": 실제로 유저가 세션을 만드는 것이 아님. 검색을 먼저 돌려서 비어있는 서버를 찾은 뒤, 첫 번째로 입장하여 '방장' 권한을 얻는 방식.
 
+// EOS 사용 시 클라이언트는 반드시 로그인(LoginToEOS)을 먼저 해야 검색/참가가 가능.
+// 서버는 TrustedServer 자격증명으로 동작하므로 로그인 불필요.
 
 
 struct FCrazyRooRoomInfo;
@@ -21,6 +24,7 @@ struct FCrazyRooRoomInfo;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCrazyRooFindRoomsComplete, const TArray<FCrazyRooRoomInfo>&, Rooms, bool, bSuccess);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCrazyRooJoinRoomComplete, bool, bSuccess, const FString&, FailReason);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooCreateRoomFailed, const FString&, FailReason);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCrazyRooLoginComplete, bool, bSuccess, const FString&, ErrorMessage);// [EOS] 로그인 완료 알림 (성공/실패). WBP_Title이 바인딩해서 성공 시 버튼 활성화
 
 UCLASS(BlueprintType)
 class CRAZYROO_API UCrazyRooSessionSubsystem : public UGameInstanceSubsystem
@@ -37,6 +41,17 @@ public:
 	void CreateDedicatedSession();
 
 	// ── 클라이언트 전용 (타이틀/방목록 UI에서 호출) ─────────────
+
+	//  EOS 로그인 요청. WBP_Title의 Construct에서 OnLoginComplete 바인딩 후 호출할 것.
+	// - 이미 로그인돼 있으면 즉시 성공 브로드캐스트
+	// - Null(LAN) 서브시스템이면 로그인이 필요 없으므로 즉시 성공 브로드캐스트 (BP 흐름 공용화)
+	// - 개발 중 로그인 방법: 실행 인자 -AUTH_LOGIN=localhost:6547 -AUTH_PASSWORD=Cred이름 -AUTH_TYPE=developer (DevAuthTool)
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Session")
+	void LoginToEOS();
+
+	// [EOS] 현재 로그인 상태 조회 (Null 서브시스템이면 항상 true)
+	UFUNCTION(BlueprintPure, Category = "CrazyRoo|Session")
+	bool IsLoggedIn() const;
 
 	//"방 참가하기" 버튼 클릭 시 호출
 	//온라인 서브시스템을 통해 켜져있는 서버(세션)들을 검색
@@ -74,14 +89,25 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo|Session")
 	FOnCrazyRooCreateRoomFailed OnCreateRoomFailed;
 
+	// EOS 로그인 완료 알림. 성공 전까지 [방 생성]/[방 참가] 버튼을 비활성화해둘 것
+	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo|Session")
+	FOnCrazyRooLoginComplete OnLoginComplete;
+
 protected:
 	// 온라인 서브시스템 콜백 핸들러 (비동기 작업 완료 시 엔진이 호출해 줌)
 	void HandleCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 	void HandleFindSessionsComplete(bool bWasSuccessful);
 	void HandleJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+	void HandleLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error);// EOS 로그인 완료 콜백
 
 	// 온라인 세션 인터페이스를 안전하게 가져오는 유틸리티 함수
 	IOnlineSessionPtr GetSessionInterface() const;
+
+	// EOS 아이덴티티(로그인) 인터페이스를 안전하게 가져오는 유틸리티 함수
+	IOnlineIdentityPtr GetIdentityInterface() const;
+
+	// EOS 현재 서브시스템이 로그인을 요구하는지 (EOS=true, Null=false)
+	bool RequiresLogin() const;
 
 	// 원본 검색 결과 데이터를 우리가 만든 FCrazyRooRoomInfo 구조체로 만들어주는 함수
 	FCrazyRooRoomInfo MakeRoomInfo(int32 Index) const;
@@ -99,6 +125,7 @@ protected:
 	FDelegateHandle CreateSessionHandle;
 	FDelegateHandle FindSessionsHandle;
 	FDelegateHandle JoinSessionHandle;
+	FDelegateHandle LoginHandle; // EOS
 
 	/** * "방 생성" 버튼을 눌렀을 때 활성화되는 플래그.
 		 * true일 경우 방 검색이 끝난 직후 UI에 리스트를 제공하지않고,
@@ -111,4 +138,9 @@ protected:
 	// - JoinRoomByIndex: 진행 중이면 거부 (검색이 인덱스를 갈아치우는 중이라 참가 불가)
 	bool bFindInProgress = false;
 
+	// EOS 로그인 진행 중 플래그 (중복 AutoLogin 방지)
+	bool bLoginInProgress = false;
+
+	// [배포] persistentauth를 먼저 시도했는지 (실패 시 accountportal 폴백 1회용)
+	bool bTriedPersistentAuth = false;
 };
