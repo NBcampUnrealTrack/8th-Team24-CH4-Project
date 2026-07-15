@@ -235,7 +235,6 @@ protected:
 	// 별도의 내부 함수로 분리했습니다.
 	void BroadcastPlayerHP();
 	//===========================================================
-
 	// 레플리케이션 변수 등록
 	virtual void GetLifetimeReplicatedProps(
 		TArray<FLifetimeProperty>& OutLifetimeProps

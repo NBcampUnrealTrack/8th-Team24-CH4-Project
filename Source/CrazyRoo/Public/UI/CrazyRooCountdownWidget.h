@@ -80,4 +80,11 @@ protected:
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Countdown")
 	void PlayGoAnimation();
+
+	/**
+	 * 서희 추가
+	 * 5, 4, 3, 2, 1 숫자가 갱신될 때마다 호출되는 애니메이션입니다.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Countdown")
+	void PlayCountAnimation(int32 NewCountdown);
 };

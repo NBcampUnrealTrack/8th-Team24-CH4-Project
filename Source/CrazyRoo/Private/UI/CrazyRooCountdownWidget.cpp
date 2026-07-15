@@ -140,6 +140,9 @@ void UCrazyRooCountdownWidget::UpdateCountdownText(
 		CountdownText->SetText(FText::AsNumber(NewCountdown));
 
 		CountdownText->SetVisibility(ESlateVisibility::Visible);
+
+		// 자식 WBP에서 숫자 등장 애니메이션 재생
+		PlayCountAnimation(NewCountdown);
 	}
 	else
 	{
