@@ -379,8 +379,22 @@ void AFlyingEnemy::HandleDeath()
 {
 	GetWorldTimerManager().ClearTimer(AttackTimerHandle);
 	bAttackTimerStarted = false;
+
+	DisableEnemyInteraction();
+
+	if (StaticMeshComponent)
+	{
+		StaticMeshComponent->SetHiddenInGame(true);
+	}
+
+	if (SkeletalMeshComponent)
+	{
+		SkeletalMeshComponent->SetHiddenInGame(true);
+	}
+
+	MulticastHideEnemyMesh();
 	BroadcastDestroyedEvent();
-	Destroy();
+	SetLifeSpan(0.1f);
 }
 
 void AFlyingEnemy::ApplyHealing(float Healing, AActor* Healer)
@@ -557,6 +571,11 @@ FVector AFlyingEnemy::ResolveMoveDirection() const
 
 void AFlyingEnemy::MulticastPlayHitEffect_Implementation(FVector EffectLocation)
 {
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
 	if (HitEffect)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
@@ -574,4 +593,17 @@ void AFlyingEnemy::MulticastPlayHitEffect_Implementation(FVector EffectLocation)
 void AFlyingEnemy::MulticastPlayAttackSound_Implementation(FVector SoundLocation)
 {
 	// Attack SFX is routed through ACrazyRooAudioNetManager on the server to avoid duplicate playback.
+}
+
+void AFlyingEnemy::MulticastHideEnemyMesh_Implementation()
+{
+	if (StaticMeshComponent)
+	{
+		StaticMeshComponent->SetHiddenInGame(true);
+	}
+
+	if (SkeletalMeshComponent)
+	{
+		SkeletalMeshComponent->SetHiddenInGame(true);
+	}
 }

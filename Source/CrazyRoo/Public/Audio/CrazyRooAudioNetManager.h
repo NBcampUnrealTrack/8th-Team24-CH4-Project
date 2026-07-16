@@ -8,6 +8,7 @@
 #include "CrazyRooAudioNetManager.generated.h"
 
 class UDataTable;
+class UCrazyRooAudioSubsystem;
 
 UCLASS(Blueprintable)
 class CRAZYROO_API ACrazyRooAudioNetManager : public AActor
@@ -17,14 +18,13 @@ class CRAZYROO_API ACrazyRooAudioNetManager : public AActor
 public:
 	ACrazyRooAudioNetManager();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Audio")
 	void RequestPlayBGM(ECrazyRooBGMType BGMType);
 
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Audio")
 	void RequestPlaySFXAtLocation(ECrazyRooSFXType SFXType, FVector Location);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastPlayBGM(ECrazyRooBGMType BGMType);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlaySFXAtLocation(ECrazyRooSFXType SFXType, FVector Location);
@@ -34,6 +34,12 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentBGMType)
+	ECrazyRooBGMType CurrentBGMType = ECrazyRooBGMType::None;
+
+	UFUNCTION()
+	void OnRep_CurrentBGMType();
 
 	// BGM usage:
 	// MainMenu UI Construct or MainMenu BeginPlay -> AudioSubsystem.PlayBGM(MainMenu)
@@ -47,4 +53,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CrazyRoo|Audio")
 	TObjectPtr<UDataTable> SFXDataTable;
+
+	UCrazyRooAudioSubsystem* EnsureAudioTablesRegistered();
+	void PlayLocalBGM(ECrazyRooBGMType BGMType);
 };

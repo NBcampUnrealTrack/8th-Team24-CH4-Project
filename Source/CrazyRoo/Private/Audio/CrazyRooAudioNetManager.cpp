@@ -7,6 +7,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Net/UnrealNetwork.h"
 
 namespace
 {
@@ -44,21 +45,11 @@ void ACrazyRooAudioNetManager::BeginPlay()
 
 	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] BeginPlay Register Audio DataTables: BGM=%s SFX=%s"), *GetNameSafe(BGMDataTable.Get()), *GetNameSafe(SFXDataTable.Get()));
 
-	UGameInstance* GameInstance = GetGameInstance();
-	if (!GameInstance)
+	EnsureAudioTablesRegistered();
+	if (CurrentBGMType != ECrazyRooBGMType::None)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] Failed to register audio data tables: GameInstance is null"));
-		return;
+		PlayLocalBGM(CurrentBGMType);
 	}
-
-	UCrazyRooAudioSubsystem* AudioSubsystem = GameInstance->GetSubsystem<UCrazyRooAudioSubsystem>();
-	if (!AudioSubsystem)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] Failed to register audio data tables: AudioSubsystem is null"));
-		return;
-	}
-
-	AudioSubsystem->SetAudioDataTables(BGMDataTable.Get(), SFXDataTable.Get());
 }
 
 void ACrazyRooAudioNetManager::RequestPlayBGM(ECrazyRooBGMType BGMType)
@@ -69,8 +60,10 @@ void ACrazyRooAudioNetManager::RequestPlayBGM(ECrazyRooBGMType BGMType)
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestPlayBGM: %s"), *GetAudioNetBGMTypeName(BGMType));
-	MulticastPlayBGM(BGMType);
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestPlayBGM Set CurrentBGMType: %s"), *GetAudioNetBGMTypeName(BGMType));
+	CurrentBGMType = BGMType;
+	ForceNetUpdate();
+	PlayLocalBGM(BGMType);
 }
 
 void ACrazyRooAudioNetManager::RequestPlaySFXAtLocation(ECrazyRooSFXType SFXType, FVector Location)
@@ -83,24 +76,6 @@ void ACrazyRooAudioNetManager::RequestPlaySFXAtLocation(ECrazyRooSFXType SFXType
 
 	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestPlaySFXAtLocation: %s"), *GetAudioNetSFXTypeName(SFXType));
 	MulticastPlaySFXAtLocation(SFXType, Location);
-}
-
-void ACrazyRooAudioNetManager::MulticastPlayBGM_Implementation(ECrazyRooBGMType BGMType)
-{
-	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] MulticastPlayBGM: %s"), *GetAudioNetBGMTypeName(BGMType));
-
-	if (GetNetMode() == NM_DedicatedServer)
-	{
-		return;
-	}
-
-	if (UGameInstance* GameInstance = GetGameInstance())
-	{
-		if (UCrazyRooAudioSubsystem* AudioSubsystem = GameInstance->GetSubsystem<UCrazyRooAudioSubsystem>())
-		{
-			AudioSubsystem->PlayBGM(BGMType);
-		}
-	}
 }
 
 void ACrazyRooAudioNetManager::MulticastPlaySFXAtLocation_Implementation(ECrazyRooSFXType SFXType, FVector Location)
@@ -136,4 +111,62 @@ ACrazyRooAudioNetManager* ACrazyRooAudioNetManager::FindAudioNetManager(UWorld* 
 
 	UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] FindAudioNetManager failed: manager not found"));
 	return nullptr;
+}
+
+void ACrazyRooAudioNetManager::OnRep_CurrentBGMType()
+{
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] OnRep_CurrentBGMType: %s"), *GetAudioNetBGMTypeName(CurrentBGMType));
+
+	if (CurrentBGMType == ECrazyRooBGMType::None)
+	{
+		return;
+	}
+
+	PlayLocalBGM(CurrentBGMType);
+}
+
+UCrazyRooAudioSubsystem* ACrazyRooAudioNetManager::EnsureAudioTablesRegistered()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] Failed to register audio data tables: GameInstance is null"));
+		return nullptr;
+	}
+
+	UCrazyRooAudioSubsystem* AudioSubsystem = GameInstance->GetSubsystem<UCrazyRooAudioSubsystem>();
+	if (!AudioSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] Failed to register audio data tables: AudioSubsystem is null"));
+		return nullptr;
+	}
+
+	AudioSubsystem->SetAudioDataTables(BGMDataTable.Get(), SFXDataTable.Get());
+	return AudioSubsystem;
+}
+
+void ACrazyRooAudioNetManager::PlayLocalBGM(ECrazyRooBGMType BGMType)
+{
+	if (BGMType == ECrazyRooBGMType::None)
+	{
+		return;
+	}
+
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] PlayLocalBGM: %s"), *GetAudioNetBGMTypeName(BGMType));
+	if (UCrazyRooAudioSubsystem* AudioSubsystem = EnsureAudioTablesRegistered())
+	{
+		AudioSubsystem->PlayBGM(BGMType);
+	}
+}
+
+void ACrazyRooAudioNetManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ACrazyRooAudioNetManager, CurrentBGMType);
 }
