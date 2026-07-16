@@ -280,9 +280,8 @@ void AGroupQTEBreakableWall::ApplyWallBrokenState()
 		return;
 	}
 
-	SetActorEnableCollision(false);
-	SetActorHiddenInGame(true);
-
+	// Chaos GeometryCollection은 BP에서 자식 컴포넌트로 붙여 쓰므로 액터 전체를 숨기거나 충돌을 끄지 않습니다.
+	// 통과 판정은 기존 WallMesh/TriggerBox만 비활성화하고, 파괴 파편 연출은 BP 컴포넌트가 계속 보여주게 둡니다.
 	if (WallMesh)
 	{
 		WallMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
