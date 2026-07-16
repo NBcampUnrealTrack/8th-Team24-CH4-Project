@@ -123,6 +123,22 @@ public:
 
 	FTimerHandle InvincibilityTimerHandle;
 
+
+	// [무송] 사망 시 재생할 몽타주
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation|Death")
+	UAnimMontage* DeathMontage;
+
+	// 사망 애니메이션을 모든 클라이언트에 재생
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayDeathMontage();
+
+	// 타이머가 끝나면 데드 시퀀스를 호출할 함수
+	void TriggerDeathSequence();
+
+	// 딜레이용 타이머 핸들
+	FTimerHandle DeathSequenceTimerHandle;
+
+
 	// 에디터에서 방금 만든 UpperBody 펀치 몽타주를 할당할 변수
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
 	UAnimMontage* PunchMontage;

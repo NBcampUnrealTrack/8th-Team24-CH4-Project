@@ -705,16 +705,46 @@ void ASharedRailCharacter::HandlePlayerDeath()
 	UE_LOG(LogTemp, Error, TEXT("[SERVER] 플레이어 사망"));
 	Multicast_NotifyPlayerDeath();
 
-	UE_LOG(LogTemp, Log, TEXT("[SharedRailCharacter] Trigger RunnerDeathSequence"));
-	if (ARunnerDeathSequence* DeathSequence = ARunnerDeathSequence::FindDeathSequence(GetWorld()))
+	// 캐릭터 조작 및 이동 강제 정지
+	SetMoveMode(ERunnerMoveMode::Stop);
+
+	// 사망 후 캡슐 컴포넌트 제거 (선택사항)
+	//if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	//{
+	//	Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//}
+
+	//사망 애니메이션 재생 (멀티캐스트)
+	Multicast_PlayDeathMontage();
+
+	//UE_LOG(LogTemp, Log, TEXT("[SharedRailCharacter] Trigger RunnerDeathSequence"));
+	//if (ARunnerDeathSequence* DeathSequence = ARunnerDeathSequence::FindDeathSequence(GetWorld()))
+	//{
+	//	DeathSequence->StartDeathSequence(this);
+	//}
+	//else
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("[SharedRailCharacter] RunnerDeathSequence not found"));
+	//}
+
+	// 애니메이션 길이에 맞춰 딜레이 설정
+	float DeathDelay = 3.0f; // 딜레이 시간(몽타주가 없을시, 혹시모를 기본값)
+	if (DeathMontage)
 	{
-		DeathSequence->StartDeathSequence(this);
+		// 몽타주 애니메이션 길이에 0.5초를 더해 데드 시퀸스로 가기 전 죽은 모습을 보여줌
+		DeathDelay = DeathMontage->GetPlayLength() + 0.5f;
 	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[SharedRailCharacter] RunnerDeathSequence not found"));
-	}
-	// TODO: 이후 GameMode에 게임오버 알림 (결과 맵 이동 등)
+
+	UE_LOG(LogTemp, Log, TEXT("[SharedRailCharacter] %f초 후 RunnerDeathSequence 실행"), DeathDelay);
+
+	// 타이머를 통해 지정된 시간 뒤에 TriggerDeathSequence 호출
+	GetWorldTimerManager().SetTimer(
+		DeathSequenceTimerHandle,
+		this,
+		&ASharedRailCharacter::TriggerDeathSequence,
+		DeathDelay,
+		false
+	);
 }
 
 void ASharedRailCharacter::Multicast_NotifyPlayerDeath_Implementation()
@@ -810,6 +840,29 @@ void ASharedRailCharacter::Multicast_StopQTEPunchMontage_Implementation()
 	}
 
 	ResetQTEPunchComboState();
+}
+
+void ASharedRailCharacter::Multicast_PlayDeathMontage_Implementation()
+{
+	// 모든 클라이언트 화면에서 사망 애니메이션 재생
+	if (DeathMontage)
+	{
+		PlayAnimMontage(DeathMontage);
+	}
+}
+
+void ASharedRailCharacter::TriggerDeathSequence()
+{
+	// 데스 시퀀스(철창 + 카메라 + UI) 최종 호출
+	UE_LOG(LogTemp, Log, TEXT("[SharedRailCharacter] Trigger RunnerDeathSequence"));
+	if (ARunnerDeathSequence* DeathSequence = ARunnerDeathSequence::FindDeathSequence(GetWorld()))
+	{
+		DeathSequence->StartDeathSequence(this);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[SharedRailCharacter] RunnerDeathSequence not found"));
+	}
 }
 
 void ASharedRailCharacter::HandleQTEPunchComboCheck()
