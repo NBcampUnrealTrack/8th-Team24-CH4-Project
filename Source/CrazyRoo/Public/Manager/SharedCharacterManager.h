@@ -60,6 +60,12 @@ public:
 	// QTE 중에는 이동/점프/사격 등은 막히지만 G키 연타는 받아야 하기 때문.
 	void RequestQTEPress(ECrazyRooPlayerRole RequestRole);
 
+	/**
+	 * 슈터의 현재 Aim Ray를 검증하고,
+	 * 조준 중인 월드 위치를 GameState에 전달합니다.
+	*/
+	void RequestUpdateSharedAim(ECrazyRooPlayerRole RequestRole,const FVector& AimOrigin,const FVector& AimDirection,AController* ShooterController);
+
 protected:
 	// 맵에 배치된 BP_SharedRailCharacter를 저장
 	UPROPERTY()
@@ -103,6 +109,10 @@ protected:
 
 	//[서희]승인된 키 입력을 GameState로 전달합니다. GameState는 이 입력을 모든 클라이언트 HUD에 Multicast합니다.
 	void NotifySharedKeyPressed(ECrazyRooSharedKey Key);
+
+	/** 조준 위치를 계산할 최대 거리입니다. */
+	UPROPERTY(EditDefaultsOnly, Category = "Shared Aim")
+	float SharedAimTraceDistance = 100000.0f;
 
 public:
 	// 테스트 목적으로 생성. true면 누구나 모든 입력 가능(Stand Alone으로 테스트용), false면 역할별 입력만 가능.
