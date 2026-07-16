@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "Engine/NetSerialization.h"
 #include "CrazyRooTypes.generated.h"
 
 class UUserWidget;
@@ -42,6 +43,23 @@ enum class ECrazyRooSharedKey : uint8
 	E     UMETA(DisplayName = "E"),
 	A     UMETA(DisplayName = "A"),
 	D     UMETA(DisplayName = "D")
+};
+
+/**
+ * 서버가 모든 클라이언트에 공유하는 현재 슈터 조준 정보
+ */
+USTRUCT(BlueprintType)
+struct FCrazyRooSharedAimData
+{
+	GENERATED_BODY()
+
+	/** 슈터가 현재 조준하고 있는 월드 위치 */
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Aim")
+	FVector_NetQuantize WorldLocation = FVector::ZeroVector;
+
+	/** 현재 조준점이 활성 상태인지 여부 */
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Aim")
+	bool bActive = false;
 };
 
 // [한길] 0712

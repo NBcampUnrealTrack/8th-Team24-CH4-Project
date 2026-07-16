@@ -354,6 +354,54 @@ void ASharedCharacterManager::RequestQTEPress(ECrazyRooPlayerRole RequestRole)
 	ActiveQTEWall->HandleQTEPress(RequestRole);
 }
 
+void ASharedCharacterManager::RequestUpdateSharedAim(ECrazyRooPlayerRole RequestRole, const FVector& AimOrigin,
+	const FVector& AimDirection, AController* ShooterController)
+{
+	if (!HasAuthority() || !SharedCharacter || bRunnerInputLocked)
+	{
+		return;
+	}
+
+	// 서버에서 최종적으로 슈터 역할을 다시 검사합니다.
+	if (!bIgnorePlayerRole &&
+		RequestRole != ECrazyRooPlayerRole::P_Shooter)
+	{
+		return;
+	}
+
+	const FVector SafeAimDirection = AimDirection.GetSafeNormal();
+
+	if (SafeAimDirection.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FVector TraceEnd = AimOrigin + SafeAimDirection * SharedAimTraceDistance;
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SharedAimTrace),true);
+
+	// 조준선이 공유 캐릭터 몸에 막히지 않도록 제외합니다.
+	QueryParams.AddIgnoredActor(SharedCharacter);
+
+	if (ShooterController && ShooterController->GetPawn())
+	{
+		QueryParams.AddIgnoredActor(ShooterController->GetPawn());
+	}
+
+	FHitResult HitResult;
+
+	const bool bHit =GetWorld()->LineTraceSingleByChannel(HitResult,AimOrigin,TraceEnd,ECC_Visibility,QueryParams);
+
+	const FVector SharedAimLocation =
+		bHit ? HitResult.ImpactPoint : TraceEnd;
+
+	if (ACrazyRooGameState* GameState =
+		GetWorld()->GetGameState<ACrazyRooGameState>())
+	{
+		GameState->SetSharedAimData(SharedAimLocation,true);
+	}
+}
+
 ATurnJudgeBox* ASharedCharacterManager::FindActiveTurnJudgeBox() const
 {
 	// 공유 캐릭터가 없으면 검사할 수 없습니다.

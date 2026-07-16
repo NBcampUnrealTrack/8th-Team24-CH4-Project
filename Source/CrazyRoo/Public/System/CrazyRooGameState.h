@@ -22,12 +22,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooCarouselIndexChanged, int
 // [한길] 0711 카운트다운 값이 바뀌었을 때 UI에 알려주는 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCountdownChanged, int32, NewCountdown);
 //[서희]서버에서 승인된 공용 키 입력이 발생했을 때 각 클라이언트의 인게임 HUD에 알려주는 이벤트입니다.
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-	FOnSharedKeyPressed,
-	ECrazyRooSharedKey,
-	Key
-);
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSharedKeyPressed,ECrazyRooSharedKey,Key);
+//[서희]조준점 UI를 위한 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSharedAimUpdated,FVector,WorldLocation,bool,bActive);
 UCLASS()
 class CRAZYROO_API ACrazyRooGameState : public AGameStateBase
 {
@@ -82,6 +79,22 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastSharedKeyPressed(ECrazyRooSharedKey Key);
 
+	/** 각 클라이언트의 WBP_InGame이 구독하는 조준 위치 이벤트 */
+	UPROPERTY(BlueprintAssignable, Category = "CrazyRoo|Shared Aim")
+	FOnSharedAimUpdated OnSharedAimUpdated;
+
+	/** 서버에서만 현재 공유 조준 위치를 변경합니다. */
+	void SetSharedAimData(
+		const FVector& WorldLocation,
+		bool bActive
+	);
+
+	UFUNCTION(BlueprintPure, Category = "CrazyRoo|Shared Aim")
+	FCrazyRooSharedAimData GetSharedAimData() const
+	{
+		return SharedAimData;
+	}
+
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentMapId)
 	FName CurrentMapId;
@@ -104,6 +117,13 @@ protected:
 	// 클라이언트가 새로운 Countdown을 복제받았을 때 호출
 	UFUNCTION()
 	void OnRep_Countdown();
+
+	/** 최신 조준 위치는 GameState를 통해 모든 클라이언트에 복제됩니다. */
+	UPROPERTY(ReplicatedUsing = OnRep_SharedAimData)
+	FCrazyRooSharedAimData SharedAimData;
+
+	UFUNCTION()
+	void OnRep_SharedAimData();
 
 public:
 	// [한길] 0711 UI가 구독할 카운트다운 변경 이벤트

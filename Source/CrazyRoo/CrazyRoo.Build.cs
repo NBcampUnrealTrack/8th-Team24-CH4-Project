@@ -22,7 +22,8 @@ public class CrazyRoo : ModuleRules
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
 			"OnlineSubsystemNull",
-			"Niagara"
+			"Niagara",
+			"SlateCore"
 		});
 		// OnlineSubsystem 주요 기능: 방 만들기(Create Session), 방 찾기(Find Session), 방 참가하기(Join Session), 친구 목록 불러오기, 업적 달성, 리더보드(랭킹) 등의 기능
 		// OnlineSubsystemUtils 주요 기능: OnlineSubsystem 편하게 쓰기 위한 기능

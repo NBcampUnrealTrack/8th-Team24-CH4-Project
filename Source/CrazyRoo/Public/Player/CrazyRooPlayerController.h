@@ -88,6 +88,19 @@ public:
 	// 테스트: 새 맵에 도착했을 때 카메라를 세팅하라는 서버의 지시(Client RPC)
 	UFUNCTION(Client, Reliable)
 	void Client_SetupGameplayCamera();
+
+	/**
+	* 인게임에서 슈터용 조준 커서 모드를 설정합니다.
+	* 슈터라면 일반 마우스 아이콘을 숨기고,
+	* WBP_AimCursor만 화면에 보이게 합니다.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Aim Cursor")
+	void SetInGameAimCursorMode(bool bShooter);
+
+	/** 메뉴로 돌아갈 때 일반 마우스 커서를 복구합니다. */
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Aim Cursor")
+	void RestoreDefaultMouseCursor();
+
 protected:
 
 	// [Client] 서버가 이미 선택된 역할이라고 거부하는 함수입니다.
@@ -169,4 +182,21 @@ protected:
 	// 현재 화면에 생성된 카운트다운 위젯입니다.
 	UPROPERTY()
 	TObjectPtr<UCrazyRooCountdownWidget> CountdownWidget;
+
+	//[서희] 조준점 UI
+	/** 일정 간격마다 현재 슈터의 Aim Ray를 서버로 보냅니다. */
+	void SendSharedAimUpdate();
+
+	/** 조준점 공유는 연출 데이터이므로 Unreliable을 사용합니다. */
+	UFUNCTION(Server, Unreliable)
+	void Server_UpdateSharedAim(
+		FVector_NetQuantize AimOrigin,
+		FVector_NetQuantizeNormal AimDirection
+	);
+
+	/** 서버 전송 주기: 0.05초 = 초당 약 20회 */
+	UPROPERTY(EditDefaultsOnly, Category = "CrazyRoo|Aim Cursor")
+	float SharedAimUpdateInterval = 0.05f;
+
+	FTimerHandle SharedAimUpdateTimerHandle;
 };
