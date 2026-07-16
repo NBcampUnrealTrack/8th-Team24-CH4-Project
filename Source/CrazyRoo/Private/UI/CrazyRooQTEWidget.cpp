@@ -184,6 +184,16 @@ void UCrazyRooQTEWidget::RefreshQTEText()
 		ShooterPressText->SetVisibility(MainQTEVisibility);
 		ShooterPressText->SetText(GetRolePressText(ECrazyRooPlayerRole::P_Shooter));
 	}
+
+	if (MainQTERoot)
+	{
+		MainQTERoot->SetVisibility(MainQTEVisibility);
+	}
+
+	if (PreparationRoot)
+	{
+		PreparationRoot->SetVisibility(PreparationVisibility);
+	}
 }
 
 FText UCrazyRooQTEWidget::GetRolePressText(ECrazyRooPlayerRole PlayerRole) const

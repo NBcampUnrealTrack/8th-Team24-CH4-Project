@@ -9,6 +9,7 @@
 
 class AGroupQTEBreakableWall;
 class UTextBlock;
+class UWidget;
 
 UCLASS()
 class CRAZYROO_API UCrazyRooQTEWidget : public UUserWidget
@@ -91,6 +92,14 @@ protected:
 	void RefreshQTEText();
 
 	FText GetRolePressText(ECrazyRooPlayerRole PlayerRole) const;
+
+	// 진행 중 QTE의 숫자, 배경, 개인 입력 슬롯 전체를 담는 루트
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UWidget> MainQTERoot;
+
+	// 준비 카운트다운과 안내 문구 전체를 담는 루트
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UWidget> PreparationRoot;
 
 private:
 	UPROPERTY()
