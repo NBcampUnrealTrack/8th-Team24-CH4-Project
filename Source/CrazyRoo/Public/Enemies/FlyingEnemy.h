@@ -190,11 +190,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy")
 	bool IsPlayerActor(AActor* Actor) const;
 
-	UFUNCTION(NetMulticast, Unreliable)
+	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayHitEffect(FVector EffectLocation);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayAttackSound(FVector SoundLocation);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastHideEnemyMesh();
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
