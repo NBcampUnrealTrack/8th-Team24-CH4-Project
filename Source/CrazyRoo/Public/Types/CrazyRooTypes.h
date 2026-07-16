@@ -4,7 +4,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Audio/CrazyRooAudioTypes.h"
 #include "Engine/DataTable.h"
+#include "Engine/NetSerialization.h"
 #include "CrazyRooTypes.generated.h"
 
 class UUserWidget;
@@ -44,6 +46,23 @@ enum class ECrazyRooSharedKey : uint8
 	D     UMETA(DisplayName = "D")
 };
 
+/**
+ * 서버가 모든 클라이언트에 공유하는 현재 슈터 조준 정보
+ */
+USTRUCT(BlueprintType)
+struct FCrazyRooSharedAimData
+{
+	GENERATED_BODY()
+
+	/** 슈터가 현재 조준하고 있는 월드 위치 */
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Aim")
+	FVector_NetQuantize WorldLocation = FVector::ZeroVector;
+
+	/** 현재 조준점이 활성 상태인지 여부 */
+	UPROPERTY(BlueprintReadOnly, Category = "CrazyRoo|Aim")
+	bool bActive = false;
+};
+
 // [한길] 0712
 // 게임플레이 맵이 시작될 때 어떤 흐름으로 이동을 시작할지 결정합니다.
 // ERunnerMoveMode는 캐릭터의 실제 이동 방식이고, 이 enum은 테스트/실게임 시작 절차를 고르는 용도입니다.
@@ -76,6 +95,9 @@ struct FCrazyRooStageInfo : public FTableRowBase
 	/** 이 맵이 실제 게임플레이 맵인지 (true면 SharedCharacterManager 스폰) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
 	bool bIsGameplayStage = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	ECrazyRooBGMType BGMType = ECrazyRooBGMType::None;
 };
 
 

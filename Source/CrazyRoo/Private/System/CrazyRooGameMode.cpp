@@ -14,12 +14,36 @@
 
 namespace
 {
+FString GetGameModeBGMTypeName(ECrazyRooBGMType BGMType)
+{
+	if (const UEnum* Enum = StaticEnum<ECrazyRooBGMType>())
+	{
+		return Enum->GetNameStringByValue(static_cast<int64>(BGMType));
+	}
+
+	return TEXT("Unknown");
+}
+
 void RequestInGameBGM(UWorld* World)
 {
 	UE_LOG(LogTemp, Log, TEXT("[CrazyRooGameMode] Request InGame BGM"));
 	if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(World))
 	{
 		AudioNetManager->RequestPlayBGM(ECrazyRooBGMType::InGame);
+	}
+}
+
+void RequestStageBGM(UWorld* World, ECrazyRooBGMType BGMType)
+{
+	if (BGMType == ECrazyRooBGMType::None)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[CrazyRooGameMode] Request Stage BGM: %s"), *GetGameModeBGMTypeName(BGMType));
+	if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(World))
+	{
+		AudioNetManager->RequestPlayBGM(BGMType);
 	}
 }
 
@@ -36,6 +60,25 @@ void ScheduleInGameBGM(ACrazyRooGameMode* GameMode)
 		[GameMode]()
 		{
 			RequestInGameBGM(GameMode->GetWorld());
+		},
+		0.1f,
+		false
+	);
+}
+
+void ScheduleStageBGM(ACrazyRooGameMode* GameMode, ECrazyRooBGMType BGMType)
+{
+	if (!GameMode || !GameMode->GetWorld() || BGMType == ECrazyRooBGMType::None)
+	{
+		return;
+	}
+
+	FTimerHandle StageBGMTimerHandle;
+	GameMode->GetWorldTimerManager().SetTimer(
+		StageBGMTimerHandle,
+		[GameMode, BGMType]()
+		{
+			RequestStageBGM(GameMode->GetWorld(), BGMType);
 		},
 		0.1f,
 		false
@@ -82,6 +125,10 @@ void ACrazyRooGameMode::BeginPlay()
 					// 시작 방식 선택을 GameMode에서만 처리하여 테스트 모드와 카운트다운 흐름이 서로 꼬이지 않게 합니다.
 					HandleGameStartMode();
 				}
+			}
+			else if (Row->BGMType != ECrazyRooBGMType::None)
+			{
+				ScheduleStageBGM(this, Row->BGMType);
 			}
 		}
 	}

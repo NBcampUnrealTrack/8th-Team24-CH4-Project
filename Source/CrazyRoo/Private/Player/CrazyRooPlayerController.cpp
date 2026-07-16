@@ -21,6 +21,7 @@
 #include "InputActionValue.h" // 테슽트용 앞 뒤 움직임.
 #include "System/CrazyRooGameInstance.h"
 #include "UI/CrazyRooCountdownWidget.h" // [한길] 0711 카운트다운 위젯
+#include "TimerManager.h"
 
 
 void ACrazyRooPlayerController::BeginPlay()
@@ -65,13 +66,26 @@ void ACrazyRooPlayerController::BeginPlay()
 	//		SetViewTargetWithBlend(SharedCharacter, 0.0f);
 	//		UE_LOG(LogCrazyRoo, Warning, TEXT("ViewTarget set to SharedCharacter"));
 	//	}
-	//}
+	//};
 
 	// [한길] 0711 카운트다운 UI
 	if (!IsLocalController())
 	{
 		return;
 	}
+
+	/*
+	 * 로컬 플레이어만 조준 위치를 서버에 전송합니다.
+	* 함수 내부에서 슈터 역할인지 다시 검사합니다.
+	*/
+	GetWorldTimerManager().SetTimer(
+		SharedAimUpdateTimerHandle,
+		this,
+		&ACrazyRooPlayerController::SendSharedAimUpdate,
+		SharedAimUpdateInterval,
+		true
+	);
+
 	// ---------------------------------------------------------
 	// 카운트다운 UI 생성
 	// ---------------------------------------------------------
@@ -212,6 +226,55 @@ void ACrazyRooPlayerController::RequestMap(FName MapId)
 void ACrazyRooPlayerController::RequestUpdateCarousel(int32 NewIndex)
 {
 	Server_UpdateCarousel(NewIndex);
+}
+
+void ACrazyRooPlayerController::SetInGameAimCursorMode(bool bShooter)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (bShooter)
+	{
+		/*
+		 * 마우스 위치는 계속 사용하지만
+		 * 언리얼 기본 화살표 이미지만 숨깁니다.
+		 */
+		bShowMouseCursor = true;
+		DefaultMouseCursor = EMouseCursor::None;
+		CurrentMouseCursor = EMouseCursor::None;
+
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		InputMode.SetLockMouseToViewportBehavior(
+			EMouseLockMode::LockAlways
+		);
+
+		SetInputMode(InputMode);
+	}
+	else
+	{
+		// 비슈터는 자신의 마우스 커서를 볼 필요가 없습니다.
+		bShowMouseCursor = false;
+		DefaultMouseCursor = EMouseCursor::Default;
+		CurrentMouseCursor = EMouseCursor::Default;
+
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+	}
+}
+
+void ACrazyRooPlayerController::RestoreDefaultMouseCursor()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	bShowMouseCursor = true;
+	DefaultMouseCursor = EMouseCursor::Default;
+	CurrentMouseCursor = EMouseCursor::Default;
 }
 
 void ACrazyRooPlayerController::Client_SetupGameplayCamera_Implementation()
@@ -500,6 +563,52 @@ void ACrazyRooPlayerController::InputMove(const FInputActionValue& Value)
 
 	Server_RequestMove(AxisValue);
 }
+
+void ACrazyRooPlayerController::SendSharedAimUpdate()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	const ACrazyRooPlayerState* CrazyRooPS =
+		GetPlayerState<ACrazyRooPlayerState>();
+
+	// 슈터가 아닌 플레이어는 Aim 데이터를 보내지 않습니다.
+	if (!CrazyRooPS ||
+		CrazyRooPS->GetPlayerRole() !=
+			ECrazyRooPlayerRole::P_Shooter)
+	{
+		return;
+	}
+
+	FVector AimOrigin;
+	FVector AimDirection;
+
+	if (!GetMouseAimRay(AimOrigin, AimDirection))
+	{
+		return;
+	}
+
+	Server_UpdateSharedAim(AimOrigin, AimDirection);
+}
+
+void ACrazyRooPlayerController::Server_UpdateSharedAim_Implementation(
+	FVector_NetQuantize AimOrigin,
+	FVector_NetQuantizeNormal AimDirection)
+{
+	if (ASharedCharacterManager* Manager =
+		GetManagerOnServer())
+	{
+		Manager->RequestUpdateSharedAim(
+			GetMyRoleOnServer(),
+			AimOrigin,
+			AimDirection,
+			this
+		);
+	}
+}
+
 void ACrazyRooPlayerController::Server_RequestMove_Implementation(float AxisValue)
 {
 	if (ASharedCharacterManager* Manager = GetManagerOnServer())

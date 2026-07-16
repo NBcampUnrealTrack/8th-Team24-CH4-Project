@@ -96,6 +96,10 @@
 		{
 			"Name": "SocketSubsystemEOS",
 			"Enabled": true
+		},
+		{
+			"Name": "FieldSystemPlugin",
+			"Enabled": true
 		}
 	]
 }

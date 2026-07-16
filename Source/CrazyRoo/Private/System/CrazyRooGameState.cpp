@@ -1,4 +1,4 @@
-	// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "System/CrazyRooGameState.h"
@@ -26,6 +26,8 @@ void ACrazyRooGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(ACrazyRooGameState, CarouselIndex);
 	// [한길] 0711 카운트다운 시간 복제
 	DOREPLIFETIME(ACrazyRooGameState, Countdown);
+	//공유 조준점 복제
+	DOREPLIFETIME(ACrazyRooGameState,SharedAimData);
 }
 
 FName ACrazyRooGameState::GetCurrentMapId() const
@@ -109,6 +111,11 @@ void ACrazyRooGameState::OnRep_Countdown()
 	UE_LOG(LogTemp, Warning, TEXT("[Client] OnRep_Countdown = %d"), Countdown);
 }
 
+void ACrazyRooGameState::OnRep_SharedAimData()
+{
+	OnSharedAimUpdated.Broadcast(SharedAimData.WorldLocation,SharedAimData.bActive);
+}
+
 // ============================================================================
 // 공용 키 입력 UI 이벤트 [서희]
 // ============================================================================
@@ -122,6 +129,26 @@ void ACrazyRooGameState::NotifySharedKeyPressed(
 		return;
 	}
 	MulticastSharedKeyPressed(Key);
+}
+
+void ACrazyRooGameState::SetSharedAimData(const FVector& WorldLocation, bool bActive)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	SharedAimData.WorldLocation = WorldLocation;
+	SharedAimData.bActive = bActive;
+
+	// 리슨 서버나 스탠드얼론 테스트 화면도 즉시 갱신합니다.
+	OnSharedAimUpdated.Broadcast(
+		SharedAimData.WorldLocation,
+		SharedAimData.bActive
+	);
+
+	// 다음 복제 주기까지 기다리지 않고 최신 위치를 전송합니다.
+	ForceNetUpdate();
 }
 
 void ACrazyRooGameState::MulticastSharedKeyPressed_Implementation(
