@@ -3,7 +3,7 @@
 
 #include "System/CrazyRooGameState.h"
 #include "CrazyRoo.h"
-#include "Types/CrazyRooTypes.h"
+// 헤더에 추가로 인한 제거 #include "Types/CrazyRooTypes.h"
 #include "Net/UnrealNetwork.h"
 
 ACrazyRooGameState::ACrazyRooGameState()
@@ -107,4 +107,29 @@ void ACrazyRooGameState::OnRep_Countdown()
 	OnCountdownChanged.Broadcast(Countdown);
 
 	UE_LOG(LogTemp, Warning, TEXT("[Client] OnRep_Countdown = %d"), Countdown);
+}
+
+// ============================================================================
+// 공용 키 입력 UI 이벤트 [서희]
+// ============================================================================
+
+void ACrazyRooGameState::NotifySharedKeyPressed(
+	ECrazyRooSharedKey Key
+)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	MulticastSharedKeyPressed(Key);
+}
+
+void ACrazyRooGameState::MulticastSharedKeyPressed_Implementation(
+	ECrazyRooSharedKey Key
+)
+{
+	// 이 부분은 서버와 각 클라이언트에서 각각 실행됩니다.
+	// 데디케이티드 서버에는 HUD가 없으므로 구독자가 없고,
+	// 각 클라이언트의 WBP_InGame만 이 이벤트를 받아 연출합니다.
+	OnSharedKeyPressed.Broadcast(Key);
 }

@@ -13,6 +13,7 @@
 #include "Obstacles/RunnerObstacleSpawner.h"
 #include "Obstacles/RunnerObstacle.h"
 #include "TimerManager.h"
+#include "System/CrazyRooGameState.h"
 
 ASharedCharacterManager::ASharedCharacterManager()
 {
@@ -106,6 +107,29 @@ void ASharedCharacterManager::InitializeSharedCharacter()
 	// 시작 방식과 카운트다운은 GameMode의 GameStartMode에서 결정합니다.
 	// 여기서 별도 타이머를 걸면 ManualTest 중에도 나중에 AutoMove로 바뀔 수 있으므로 자동 시작은 하지 않습니다.
 }
+//[서희]
+void ASharedCharacterManager::NotifySharedKeyPressed(
+	ECrazyRooSharedKey Key
+)
+{
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	ACrazyRooGameState* GameState =
+		GetWorld()
+			? GetWorld()->GetGameState<ACrazyRooGameState>()
+			: nullptr;
+
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->NotifySharedKeyPressed(Key);
+}
 
 void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
 {
@@ -125,6 +149,9 @@ void ASharedCharacterManager::RequestMoveLeft(ECrazyRooPlayerRole RequestRole)
 		UE_LOG(LogCrazyRoo, Warning, TEXT("MoveLeft 무시: 요청역할 %s (P_Left 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
+
+	// 승인된 A 입력을 모든 클라이언트 HUD에 전달
+	NotifySharedKeyPressed(ECrazyRooSharedKey::A);
 
 	// [한길] 0703 코너링 시스템.
 	// 먼저 코너링 판정을 시도합니다.
@@ -155,6 +182,8 @@ void ASharedCharacterManager::RequestMoveRight(ECrazyRooPlayerRole RequestRole)
 		return;
 	}
 
+	NotifySharedKeyPressed(ECrazyRooSharedKey::D);
+
 	//[한길] 0703 코너링 시스템.
 	// 먼저 우회전 판정을 수행합니다.
 	if (TryHandleTurnInput(
@@ -182,6 +211,8 @@ void ASharedCharacterManager::RequestJump(ECrazyRooPlayerRole RequestRole)
 		return;
 	}
 
+	NotifySharedKeyPressed(ECrazyRooSharedKey::Space);
+
 	SharedCharacter->DoJump();
 }
 
@@ -197,6 +228,8 @@ void ASharedCharacterManager::RequestSlide(ECrazyRooPlayerRole RequestRole)
 		UE_LOG(LogCrazyRoo, Warning, TEXT("Slide 무시: 요청역할 %s (P_Acrobat 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
+
+	NotifySharedKeyPressed(ECrazyRooSharedKey::Shift);
 
 	SharedCharacter->DoSlide();
 }
@@ -230,6 +263,8 @@ void ASharedCharacterManager::RequestRotateCameraLeft(ECrazyRooPlayerRole Reques
 		return;
 	}
 
+	NotifySharedKeyPressed(ECrazyRooSharedKey::Q);
+
 	SharedCharacter->RotateCameraLeft();
 }
 
@@ -246,6 +281,8 @@ void ASharedCharacterManager::RequestRotateCameraRight(ECrazyRooPlayerRole Reque
 		return;
 	}
 
+	NotifySharedKeyPressed(ECrazyRooSharedKey::E);
+
 	SharedCharacter->RotateCameraRight();
 }
 
@@ -261,6 +298,9 @@ void ASharedCharacterManager::RequestFireAimRay(ECrazyRooPlayerRole RequestRole,
 		UE_LOG(LogCrazyRoo, Warning, TEXT("FireAimRay 무시: 요청역할 %s (P_Shooter 아님)"),CrazyRooRoleToString(RequestRole));
 		return;
 	}
+
+	// 승인된 마우스 사격 입력을 HUD에 전달
+	NotifySharedKeyPressed(ECrazyRooSharedKey::Mouse);
 
 	// [한길] 0710 발사 방식에 따라 발사 수행.
 	SharedCharacter->FireBySelectedMode(AimOrigin, AimDirection, ShooterController);

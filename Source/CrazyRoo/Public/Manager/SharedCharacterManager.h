@@ -17,6 +17,7 @@ class AFlyingEnemy;
 class ARunnerObstacleSpawner;
 class ARunnerObstacle;
 class AGroupQTEBreakableWall;
+enum class ECrazyRooSharedKey : uint8;
 
 UCLASS()
 class CRAZYROO_API ASharedCharacterManager :public AActor
@@ -100,6 +101,8 @@ protected:
 	void HandlePlayerHitObstacle(ARunnerObstacle* Obstacle, AActor* PlayerActor,
 		ERunnerObstacleActionType ActionType, ERunnerLaneCoverage LaneCoverage, ERunnerLane Lane);
 
+	//[서희]승인된 키 입력을 GameState로 전달합니다. GameState는 이 입력을 모든 클라이언트 HUD에 Multicast합니다.
+	void NotifySharedKeyPressed(ECrazyRooSharedKey Key);
 
 public:
 	// 테스트 목적으로 생성. true면 누구나 모든 입력 가능(Stand Alone으로 테스트용), false면 역할별 입력만 가능.

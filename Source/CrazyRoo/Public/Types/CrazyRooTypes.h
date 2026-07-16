@@ -26,6 +26,23 @@ enum class ECrazyRooPlayerRole : uint8
 	P_Acrobat	UMETA(DisplayName = "Acrobat")
 };
 
+/** [서희]
+ * 인게임 HUD에 표시할 공용 조작 키입니다.
+ *
+ * 키 입력은 각 플레이어의 PlayerController에서 시작되지만,
+ * 승인된 입력은 GameState를 통해 모든 클라이언트 화면에 전달됩니다.
+ */
+UENUM(BlueprintType)
+enum class ECrazyRooSharedKey : uint8
+{
+	Shift UMETA(DisplayName = "Shift"),
+	Space UMETA(DisplayName = "Space"),
+	Q     UMETA(DisplayName = "Q"),
+	Mouse UMETA(DisplayName = "Mouse"),
+	E     UMETA(DisplayName = "E"),
+	A     UMETA(DisplayName = "A"),
+	D     UMETA(DisplayName = "D")
+};
 
 // [한길] 0712
 // 게임플레이 맵이 시작될 때 어떤 흐름으로 이동을 시작할지 결정합니다.
