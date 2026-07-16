@@ -53,6 +53,12 @@ void UCrazyRooAudioSubsystem::PlayBGM(ECrazyRooBGMType BGMType)
 		return;
 	}
 
+	if (CurrentBGMType == BGMType && CurrentBGMComponent && CurrentBGMComponent->IsPlaying())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[AudioSubsystem] Skip same BGM: %s"), *GetBGMTypeName(BGMType));
+		return;
+	}
+
 	const FCrazyRooBGMDataRow* BGMData = FindBGMData(BGMType);
 	if (!BGMData || !BGMData->Sound)
 	{
@@ -77,7 +83,7 @@ void UCrazyRooAudioSubsystem::PlayBGM(ECrazyRooBGMType BGMType)
 
 	const float FinalVolume = BGMVolume * FMath::Max(0.0f, BGMData->VolumeMultiplier);
 	CurrentBGMDataVolumeMultiplier = FMath::Max(0.0f, BGMData->VolumeMultiplier);
-	CurrentBGMComponent = UGameplayStatics::CreateSound2D(this, BGMData->Sound, FinalVolume, 1.0f, 0.0f, nullptr, false, false);
+	CurrentBGMComponent = UGameplayStatics::CreateSound2D(this, BGMData->Sound, FinalVolume, 1.0f, 0.0f, nullptr, true, false);
 	if (!CurrentBGMComponent)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[AudioSubsystem] Failed to create BGM component: %s"), *GetBGMTypeName(BGMType));

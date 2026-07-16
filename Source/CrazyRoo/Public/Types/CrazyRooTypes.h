@@ -4,6 +4,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Audio/CrazyRooAudioTypes.h"
 #include "Engine/DataTable.h"
 #include "CrazyRooTypes.generated.h"
 
@@ -76,6 +77,9 @@ struct FCrazyRooStageInfo : public FTableRowBase
 	/** 이 맵이 실제 게임플레이 맵인지 (true면 SharedCharacterManager 스폰) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
 	bool bIsGameplayStage = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	ECrazyRooBGMType BGMType = ECrazyRooBGMType::None;
 };
 
 
