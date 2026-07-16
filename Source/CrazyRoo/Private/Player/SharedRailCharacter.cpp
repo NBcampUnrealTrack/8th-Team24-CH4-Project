@@ -163,6 +163,10 @@ void ASharedRailCharacter::Tick(float DeltaTime)
     FVector CurrentLocation = GetActorLocation();
     FVector TargetLocation = GetTargetLaneLocation();
 
+	// 레일 보정은 좌우 위치만 맞추고, 점프/낙하 높이는 CharacterMovement가 관리하게 둡니다.
+	// TargetLocation의 Z를 그대로 쓰면 점프 중에도 캡슐이 바닥 레일 높이로 다시 끌려갑니다.
+	TargetLocation.Z = CurrentLocation.Z;
+
     // 현재 위치에서 목표 레일까지 부드럽게 이동
     FVector NewLocation = FMath::VInterpTo(
         CurrentLocation,
@@ -323,6 +327,18 @@ void ASharedRailCharacter::RotateCameraRight()
     TargetCameraYaw += 90.f;
 
     UE_LOG(LogTemp, Warning, TEXT("Rotate Camera Right / TargetYaw: %f"), TargetCameraYaw);
+}
+
+void ASharedRailCharacter::ResetCameraToForwardDirection()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	TargetCameraYaw = 0.f;
+
+	UE_LOG(LogTemp, Warning, TEXT("Reset Camera To Forward Direction"));
 }
 
 void ASharedRailCharacter::EndSlide()

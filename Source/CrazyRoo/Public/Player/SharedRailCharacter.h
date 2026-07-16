@@ -182,6 +182,9 @@ public:
 	// E 입력
 	void RotateCameraRight();
 
+	// QTE 종료 후 전진 방향에 맞게 카메라를 되돌립니다.
+	void ResetCameraToForwardDirection();
+
 	// 사격
 	void FireToLocation(const FVector& TargetLocation);
 

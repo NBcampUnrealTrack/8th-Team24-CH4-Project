@@ -204,12 +204,14 @@ void AGroupQTEBreakableWall::CompleteQTE()
 	GetWorldTimerManager().ClearTimer(QTEPreparationTimerHandle);
 	GetWorldTimerManager().ClearTimer(QTETimerHandle);
 	ForceNetUpdate();
-	Multicast_HideQTEWidget(true);
 
 	if (ASharedRailCharacter* SharedCharacter = GetSharedCharacter())
 	{
+		SharedCharacter->ResetCameraToForwardDirection();
 		SharedCharacter->Multicast_StopQTEPunchMontage();
 	}
+
+	Multicast_HideQTEWidget(true);
 
 	if (ASharedCharacterManager* Manager = GetSharedCharacterManager())
 	{
