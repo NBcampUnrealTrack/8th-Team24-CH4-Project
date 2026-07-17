@@ -12,6 +12,7 @@
 #include "Misc/Parse.h"
 
 const FName UCrazyRooSessionSubsystem::RoomNameKey(TEXT("ROOM_NAME"));
+const FName UCrazyRooSessionSubsystem::PlayerCountKey(TEXT("CURPLAYERS")); // 현재 인원수 광고 키
 
 void UCrazyRooSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -135,7 +136,7 @@ void UCrazyRooSessionSubsystem::LoginToEOS()
 	FOnlineAccountCredentials Credentials(TEXT("accountportal"), TEXT(""), TEXT(""));
 	Identity->Login(0, Credentials);
 
-	// ── [배포 모드] 인자가 없으면: 저장된 토큰(persistentauth)으로 조용히 로그인 시도 ──
+	// ── [배포 모드] 인자가 없으면: 저장된 토큰(persistentauth)으로 로그인 시도 ──
 	//UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][CLIENT] EOS PersistentAuth 로그인 시도"));
 	//bTriedPersistentAuth = true;
 	//FOnlineAccountCredentials Credentials(TEXT("persistentauth"), TEXT(""), TEXT(""));
@@ -207,8 +208,12 @@ void UCrazyRooSessionSubsystem::CreateDedicatedSession()
 	Settings.bIsLANMatch = (IOnlineSubsystem::Get()->GetSubsystemName() == NULL_SUBSYSTEM);
 
 	// 방 목록 UI에 띄워줄 방 제목을 세션 데이터에 끼워 넣습니다.
-	// 고민: 방생성하겠냐고 확인용 팝업창을 띄울지 , 일단 "CrazyRoo Room"으로 생성되게 고정
+	// 방생성하겠냐고 확인용 팝업창을 띄울지? , 일단 "CrazyRoo Room"으로 생성되게 고정
 	Settings.Set(RoomNameKey, FString(TEXT("CrazyRoo Room")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+	// 부팅 직후는 빈 방이므로 인원수 0으로  시작.
+	// (클라 숨김 필터가 0명을 걸러내므로, 아무도 안 들어온 서버는 목록에 안 보임)
+	Settings.Set(PlayerCountKey, 0, EOnlineDataAdvertisementType::ViaOnlineService);
 
 	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][SERVER] CreateSession 요청 (LAN=%d)"), Settings.bIsLANMatch ? 1 : 0);
 	// 엔진에게 세션 생성을 지시합니다. 완료 시 HandleCreateSessionComplete가 자동 호출됩니다.
@@ -223,6 +228,36 @@ void UCrazyRooSessionSubsystem::HandleCreateSessionComplete(FName SessionName, b
 	// 데디서버는 이미 LobbyMap을 로드한 상태로 켜졌기 때문에 맵 이동(ServerTravel)을 할 필요가 없습니다.
 	// 이대로 유저를 기다립니다.
 }
+
+// ─────────────────────────────────────────────────────────────
+// [Server] 인원수 갱신 — GameMode의 PostLogin/Logout에서 호출
+// ─────────────────────────────────────────────────────────────
+
+
+void UCrazyRooSessionSubsystem::UpdateAdvertisedPlayerCount(int32 Count)
+{
+	IOnlineSessionPtr Sessions = GetSessionInterface();
+	if (!Sessions.IsValid())
+	{
+		return;
+	}
+
+	// 서버가 부팅 시 만들어둔 세션을 찾는다 (없으면 아직 생성 전이거나 실패한 상태)
+	FNamedOnlineSession* Named = Sessions->GetNamedSession(NAME_GameSession);
+	if (!Named)
+	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][SERVER] 인원수 갱신 실패 — 세션 없음 (Count=%d)"), Count);
+		return;
+	}
+
+	// 기존 세팅(방 이름 등)을 복사한 뒤 인원수 키만 갱신해서 백엔드에 업데이트
+	FOnlineSessionSettings NewSettings = Named->SessionSettings;
+	NewSettings.Set(PlayerCountKey, Count, EOnlineDataAdvertisementType::ViaOnlineService);
+	Sessions->UpdateSession(NAME_GameSession, NewSettings, true); // true = 온라인 서비스(백엔드)까지 반영
+
+	UE_LOG(LogCrazyRoo, Warning, TEXT("[Session][SERVER] 인원수 광고 갱신: %d/%d"), Count, MaxPlayersPerRoom);
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // [Client] 방 검색 ("방 참가", "새로고침" 버튼)
@@ -296,9 +331,21 @@ FCrazyRooRoomInfo UCrazyRooSessionSubsystem::MakeRoomInfo(int32 Index) const
 	// 원본 검색 데이터에서 필요한 정보만 뽑아 블루프린트용 구조체 만듬
 	Info.SearchResultIndex = Index;
 	Info.MaxPlayers        = R.Session.SessionSettings.NumPublicConnections;
-	// 빈 자리를 이용해 현재 들어있는 인원수를 계산
-	Info.CurrentPlayers    = Info.MaxPlayers - R.Session.NumOpenPublicConnections;
-	Info.PingMs            = R.PingInMs;
+
+	// 현재 인원수 계산:
+	// 1순위 — 서버가 직접 광고한 CURPLAYERS 키 (EOS에서 신뢰 가능한 유일한 값)
+	// 2순위 — 열린 슬롯 역산 (Null/LAN 폴백. EOS에선 NumOpenPublicConnections가 0으로 와서 4/4 버그의 원인이었음)
+	int32 AdvertisedCount = -1;
+	if (R.Session.SessionSettings.Get(PlayerCountKey, AdvertisedCount) && AdvertisedCount >= 0)
+	{
+		Info.CurrentPlayers = AdvertisedCount;
+	}
+	else
+	{
+		Info.CurrentPlayers = Info.MaxPlayers - R.Session.NumOpenPublicConnections;
+	}
+
+	Info.PingMs = R.PingInMs;
 
 	// 아까 서버가 세팅해둔 방 제목 데이터를 꺼내옴 (지금은 고정임)
 	if (!R.Session.SessionSettings.Get(RoomNameKey, Info.RoomName))

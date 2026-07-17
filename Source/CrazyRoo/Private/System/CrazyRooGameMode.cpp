@@ -11,6 +11,7 @@
 #include "System/CrazyRooGameInstance.h"
 #include "Manager/SharedCharacterManager.h"
 #include "TimerManager.h"
+#include "Manager/CrazyRooSessionSubsystem.h"
 
 namespace
 {
@@ -169,6 +170,16 @@ void ACrazyRooGameMode::PostLogin(APlayerController* NewPlayer)
 
 	FCrazyRooDebug::Print(this, Msg, FColor::Green);
 
+	// 방 인원 변동을 세션 백엔드에 광고 (데디서버에서만 의미 있음)
+	// 다른 클라의 방 목록/방 생성 판정이 이 값을 읽는다
+	if (IsRunningDedicatedServer())
+	{
+		if (UCrazyRooSessionSubsystem* SS = GetGameInstance()->GetSubsystem<UCrazyRooSessionSubsystem>())
+		{
+			SS->UpdateAdvertisedPlayerCount(Num);
+		}
+	}
+
 	ApplyMatchStateForCurrentMap();
 	InitPlayerForCurrentMap(NewPlayer);
 	//** Stand Alone MainLevel 테스트용 게임 맵으로 바로 열고 싶을 때 **
@@ -258,7 +269,33 @@ void ACrazyRooGameMode::Logout(AController* Exiting)
 	const FString Msg = FString::Printf(TEXT("Logout: %s 나감"),Exiting ? *Exiting->GetName() : TEXT("null"));
 	FCrazyRooDebug::Print(this, Msg, FColor::Orange);
 
+	// 방이 완전히 비면 순번을 리셋 → 다음에 [방 생성]으로 들어오는 사람이 다시 1번(방장)이 됨
+	// (이 시점 PlayerArray에는 나가는 본인이 아직 남아있을 수 있으므로 1명 이하 = 사실상 빈 방)
+	if (const AGameStateBase* GS = GetGameState<AGameStateBase>())
+	{
+		if (GS->PlayerArray.Num() <= 1)
+		{
+			NextJoinOrder = 1;
+			FCrazyRooDebug::Print(this, TEXT("방이 비었음 — JoinOrder 리셋 (다음 입장자 = 방장)"), FColor::Cyan);
+		}
+	}
+
 	Super::Logout(Exiting);
+
+	// 인원 변동 갱신 — 나간 사람이 PlayerArray에서 빠진 뒤 세야 하므로 다음 틱에 실행
+	if (IsRunningDedicatedServer())
+	{
+		GetWorldTimerManager().SetTimerForNextTick([this]()
+		{
+			const AGameStateBase* GS = GetGameState<AGameStateBase>();
+			const int32 Count = GS ? GS->PlayerArray.Num() : 0;
+			if (UCrazyRooSessionSubsystem* SS = GetGameInstance()->GetSubsystem<UCrazyRooSessionSubsystem>())
+			{
+				SS->UpdateAdvertisedPlayerCount(Count);
+			}
+		});
+	}
+
 }
 
 void ACrazyRooGameMode::HandleSeamlessTravelPlayer(AController*& C)

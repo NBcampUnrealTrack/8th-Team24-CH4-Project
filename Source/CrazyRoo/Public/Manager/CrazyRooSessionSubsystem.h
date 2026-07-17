@@ -40,6 +40,13 @@ public:
 	// 데디서버 부팅 시 자동으로 호출되어 세션 1개를 온라인 서비스(또는 LAN)에 등록합니다. 클라이언트는 이 함수를 호출하지 않음
 	void CreateDedicatedSession();
 
+	// [Server] 현재 방 인원수를 세션 커스텀 속성(CURPLAYERS)으로 백엔드에 갱신.
+	// EOS는 검색 결과의 NumOpenPublicConnections를 신뢰할 수 없으므로(항상 0으로 옴 → 4/4 버그),
+	// 서버가 GameMode의 PostLogin/Logout 시점에 이 함수로 인원수를 직접 전달
+	// 클라의 MakeRoomInfo는 이 키를 우선 읽고, 없으면 기존 계산(Null 호환)으로 폴백
+	void UpdateAdvertisedPlayerCount(int32 Count);
+
+
 	// ── 클라이언트 전용 (타이틀/방목록 UI에서 호출) ─────────────
 
 	//  EOS 로그인 요청. WBP_Title의 Construct에서 OnLoginComplete 바인딩 후 호출할 것.
@@ -117,6 +124,9 @@ protected:
 
 	// 세션 검색 시 사용할 방 이름에 대한 커스텀 키값
 	static const FName RoomNameKey;
+
+	// [EOS 대응] 현재 인원수를 광고하는 커스텀 키값 (서버가 갱신, 클라가 읽음)
+	static const FName PlayerCountKey;
 
 	// 방 검색을 돌리고 난 뒤, 그 결과 리스트를 들고 있는 변수 (참가할 때 여기서 인덱스로 꺼내 씀)
 	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
