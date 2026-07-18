@@ -214,7 +214,7 @@ void ACrazyRooGameMode::InitGame(const FString& MapName, const FString& Options,
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
 
-	// 규칙!! 데이터 테이블 RowName == 맵 에셋 이름
+	// 규칙 데이터 테이블 RowName == 맵 에셋 이름
 	// 어떤 경로(트래블/직접실행/PIE/데디)로 열리든 실제 월드 이름에서 MapId를 역산한다
 	if (UCrazyRooGameInstance* GI = GetGameInstance<UCrazyRooGameInstance>())
 	{
@@ -458,7 +458,13 @@ void ACrazyRooGameMode::InitPlayerForCurrentMap(AController* C)
 	//}
 }
 
-bool ACrazyRooGameMode::AreAllPlayersReady() const
+bool ACrazyRooGameMode::HasMinimumPlayers() const
+{
+	const AGameStateBase* GS = GetGameState<AGameStateBase>();
+	return GS && GS->PlayerArray.Num() >= MinPlayersToStart;
+}
+
+bool ACrazyRooGameMode::AreAllRolesSelected() const
 {
 	const AGameStateBase* GS = GetGameState<AGameStateBase>();
 	if (!GS)
@@ -466,17 +472,11 @@ bool ACrazyRooGameMode::AreAllPlayersReady() const
 		return false;
 	}
 
-	// 인원 검사 — MinPlayersToStart 미만이면 시작 불가
-	if (GS->PlayerArray.Num() < MinPlayersToStart)
-	{
-		return false;
-	}
-
-	// 준비 검사 — 방장은 시작 버튼을 누르는 것 자체가 의사표시이므로 제외
+	// 방에 있는 전원(방장 포함)이 역할을 하나씩 골랐는지 검사.
 	for (APlayerState* Raw : GS->PlayerArray)
 	{
 		const ACrazyRooPlayerState* PS = Cast<ACrazyRooPlayerState>(Raw);
-		if (PS && !PS->IsHost() && !PS->IsReady())
+		if (PS && PS->GetPlayerRole() == ECrazyRooPlayerRole::None)
 		{
 			return false;
 		}
@@ -486,7 +486,10 @@ bool ACrazyRooGameMode::AreAllPlayersReady() const
 
 bool ACrazyRooGameMode::IsDevSoloStart() const
 {
-	return bDevAllowSoloStart;
+	// [핵심] GameStartMode == Normal(실게임)이면 dev 플래그가 켜져 있어도 무시.
+	// → 실게임에서는 항상 정식 규칙 적용. 테스트 모드(ManualTest/AutoMoveTest)일 때만 솔로 시작 허용.
+	// → 시연 직전에 bDevAllowSoloStart 끄는 걸 깜빡해도 Normal이기만 하면 안전함
+	return bDevAllowSoloStart && GameStartMode != ECrazyRooGameStartMode::Normal;
 }
 
 // 빈 역할을 찾아주는 함수입니다.

@@ -340,11 +340,21 @@ void ACrazyRooPlayerController::ServerTravel_Implementation(FName MapId)
 				return;
 			}
 		}
-		else if (!GM->AreAllPlayersReady())
+		else
 		{
-			// 정식 규칙: 최소 인원 + 전원 준비
-			FCrazyRooDebug::Print(this, TEXT("[SERVER] 트래블 거부: 인원 부족 또는 전원 준비 안 됨"), FColor::Red);
-			return;
+			// 정식 규칙 (GameStartMode == Normal이면 항상 이 경로):
+			// 최소 인원 검사
+			if (!GM->HasMinimumPlayers())
+			{
+				FCrazyRooDebug::Print(this, TEXT("[SERVER] 트래블 거부: 인원 부족"), FColor::Red);
+				return;
+			}
+			// 전원(방장 포함) 역할 선택
+			if (!GM->AreAllRolesSelected())
+			{
+				FCrazyRooDebug::Print(this, TEXT("[SERVER] 트래블 거부: 모든 플레이어가 역할을 선택해야 합니다"), FColor::Red);
+				return;
+			}
 		}
 	}
 
@@ -477,7 +487,7 @@ ASharedCharacterManager* ACrazyRooPlayerController::GetManagerOnServer() const
 
 ECrazyRooPlayerRole ACrazyRooPlayerController::GetMyRoleOnServer() const
 {
-	// ★ 역할의 진실은 PlayerState 하나 (컨트롤러에 중복 저장 안 함)
+	// 역할의 진실은 PlayerState 하나 (컨트롤러에 중복 저장 안 함)
 	const ACrazyRooPlayerState* PS = GetPlayerState<ACrazyRooPlayerState>();
 	return PS ? PS->GetPlayerRole() : ECrazyRooPlayerRole::None;
 }

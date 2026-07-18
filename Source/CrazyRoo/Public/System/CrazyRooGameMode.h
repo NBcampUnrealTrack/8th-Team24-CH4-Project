@@ -42,9 +42,13 @@ public:
 	/** 게임플레이 맵에 플레이어가 진입했을 때 공통 세팅 (카메라 + 역할 폴백). 로비 맵이면 아무것도 안 함 */
 	void InitPlayerForCurrentMap(AController* C);
 
+	/** [Server] 시작 조건 검사: 현재 인원이 MinPlayersToStart 이상인지 */
+	UFUNCTION(BlueprintPure, Category = "CrazyRoo")
+	bool HasMinimumPlayers() const;
 
-	/** [Server] 시작 조건 검사: 최소 인원 충족 + (방장 제외) 전원 준비 */
-	bool AreAllPlayersReady() const;
+	/** [Server] 시작 조건 검사: 방에 있는 전원(방장 포함)이 역할을 선택했는지 */
+	UFUNCTION(BlueprintPure, Category = "CrazyRoo")
+	bool AreAllRolesSelected() const;
 
 	/** 개발용 솔로 시작 허용 여부 (ServerTravel 가드가 참조) */
 	bool IsDevSoloStart() const;
