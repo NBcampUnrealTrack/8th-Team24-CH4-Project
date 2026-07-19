@@ -15,6 +15,7 @@
 #include "Manager/SharedCharacterManager.h"
 #include "Camera/CameraComponent.h"
 #include "Player/SharedRailCharacter.h"
+#include "Manager/CrazyRooLocalPlayerSubsystem.h"
 
 ARunnerEndingBox::ARunnerEndingBox()
 {
@@ -181,6 +182,17 @@ void ARunnerEndingBox::PlayLocalClearSequence(const FTransform& DanceSpawnTransf
 		{
 			PlayerController->SetViewTarget(ClearCamera);
 		}
+
+		// [무송] 클리어 화면이 뜨는 동안 인게임 메인 UI(HUD)를 잠시 숨김.
+		// 위젯을 파괴하지 않으므로, 재시작(맵 트래블) 시 새 UI가 뜨거나 SetMainUIVisible(true)로 복구 가능
+		if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
+		{
+			if (UCrazyRooLocalPlayerSubsystem* UISubsystem = LocalPlayer->GetSubsystem<UCrazyRooLocalPlayerSubsystem>())
+			{
+				UISubsystem->SetMainUIVisible(false);
+			}
+		}
+		//
 
 		if (ClearWidgetClass)
 		{

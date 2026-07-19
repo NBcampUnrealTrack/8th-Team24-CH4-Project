@@ -32,6 +32,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|UI")
 	void SetUIInputMode(bool bShowUI);
 
+	/**
+	 * 현재 맵의 메인 UI(CurrentWidget)를 잠시 숨기거나 다시 보이게 한다.
+	 * 위젯을 파괴하지 않고 Visibility만 바꾸는 방식.
+	 * 다시 시작: (RequestMap으로 같은 맵 재로드) ShowStageUI가 새 위젯을 만들므로 자동 복구
+	 * 트래블 없이 게임으로 복귀하는 흐름이 생기면 BP에서 true로 호출해 복구하면 된다.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|UI")
+	void SetMainUIVisible(bool bVisible);
+
 protected:
 	/** 새 월드 준비됨 → GameStateSetEvent 구독 시작 + 이미 있으면 즉시 바인딩 */
 	void OnWorldReady(const UWorld::FActorsInitializedParams& Params);

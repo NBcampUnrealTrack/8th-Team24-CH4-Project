@@ -191,3 +191,17 @@ void UCrazyRooLocalPlayerSubsystem::SetUIInputMode(bool bShowUI)
 
 	UE_LOG(LogCrazyRoo, Warning, TEXT("[UISubsystem] SetUIInputMode(%s)"), bShowUI ? TEXT("true") : TEXT("false"));
 }
+
+void UCrazyRooLocalPlayerSubsystem::SetMainUIVisible(bool bVisible)
+{
+	if (!CurrentWidget)
+	{
+		UE_LOG(LogCrazyRoo, Warning, TEXT("[UISubsystem] SetMainUIVisible(%s) — CurrentWidget 없음, 무시"),
+			bVisible ? TEXT("true") : TEXT("false"));
+		return;
+	}
+	CurrentWidget->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+
+	UE_LOG(LogCrazyRoo, Warning, TEXT("[UISubsystem] 메인 UI %s"),
+		bVisible ? TEXT("표시") : TEXT("숨김"));
+}
