@@ -24,7 +24,13 @@ public:
 	void RequestPlayBGM(ECrazyRooBGMType BGMType);
 
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Audio")
+	void RequestStopBGM(float FadeOutTime = 0.0f);
+
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Audio")
 	void RequestPlaySFXAtLocation(ECrazyRooSFXType SFXType, FVector Location);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastStopBGM(float FadeOutTime);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlaySFXAtLocation(ECrazyRooSFXType SFXType, FVector Location);
@@ -56,4 +62,5 @@ protected:
 
 	UCrazyRooAudioSubsystem* EnsureAudioTablesRegistered();
 	void PlayLocalBGM(ECrazyRooBGMType BGMType);
+	void StopLocalBGM(float FadeOutTime);
 };

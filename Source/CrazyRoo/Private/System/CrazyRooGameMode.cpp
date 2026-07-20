@@ -48,6 +48,15 @@ void RequestStageBGM(UWorld* World, ECrazyRooBGMType BGMType)
 	}
 }
 
+void RequestStopBGM(UWorld* World, float FadeOutTime)
+{
+	UE_LOG(LogTemp, Log, TEXT("[CrazyRooGameMode] Request Stop BGM: %.2f"), FadeOutTime);
+	if (ACrazyRooAudioNetManager* AudioNetManager = ACrazyRooAudioNetManager::FindAudioNetManager(World))
+	{
+		AudioNetManager->RequestStopBGM(FadeOutTime);
+	}
+}
+
 void ScheduleInGameBGM(ACrazyRooGameMode* GameMode)
 {
 	if (!GameMode || !GameMode->GetWorld())
@@ -582,6 +591,7 @@ void ACrazyRooGameMode::HandleGameStartMode()
 		// Normal에서는 기존처럼 역할별 입력 제한을 유지합니다.
 		SharedCharacterManager->SetIgnorePlayerRole(false);
 		SharedCharacterManager->StopMove();
+		RequestStopBGM(GetWorld(), 0.0f);
 		StartCountdown();
 		UE_LOG(LogCrazyRoo, Warning, TEXT("Game Start Mode: Normal"));
 		break;

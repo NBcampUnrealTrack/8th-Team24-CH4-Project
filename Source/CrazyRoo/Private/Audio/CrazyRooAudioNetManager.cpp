@@ -66,6 +66,20 @@ void ACrazyRooAudioNetManager::RequestPlayBGM(ECrazyRooBGMType BGMType)
 	PlayLocalBGM(BGMType);
 }
 
+void ACrazyRooAudioNetManager::RequestStopBGM(float FadeOutTime)
+{
+	if (!HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AudioNetManager] RequestStopBGM ignored on non-authority"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestStopBGM: %.2f"), FadeOutTime);
+	CurrentBGMType = ECrazyRooBGMType::None;
+	ForceNetUpdate();
+	MulticastStopBGM(FadeOutTime);
+}
+
 void ACrazyRooAudioNetManager::RequestPlaySFXAtLocation(ECrazyRooSFXType SFXType, FVector Location)
 {
 	if (!HasAuthority())
@@ -76,6 +90,12 @@ void ACrazyRooAudioNetManager::RequestPlaySFXAtLocation(ECrazyRooSFXType SFXType
 
 	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] RequestPlaySFXAtLocation: %s"), *GetAudioNetSFXTypeName(SFXType));
 	MulticastPlaySFXAtLocation(SFXType, Location);
+}
+
+void ACrazyRooAudioNetManager::MulticastStopBGM_Implementation(float FadeOutTime)
+{
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] MulticastStopBGM: %.2f"), FadeOutTime);
+	StopLocalBGM(FadeOutTime);
 }
 
 void ACrazyRooAudioNetManager::MulticastPlaySFXAtLocation_Implementation(ECrazyRooSFXType SFXType, FVector Location)
@@ -161,6 +181,20 @@ void ACrazyRooAudioNetManager::PlayLocalBGM(ECrazyRooBGMType BGMType)
 	if (UCrazyRooAudioSubsystem* AudioSubsystem = EnsureAudioTablesRegistered())
 	{
 		AudioSubsystem->PlayBGM(BGMType);
+	}
+}
+
+void ACrazyRooAudioNetManager::StopLocalBGM(float FadeOutTime)
+{
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[AudioNetManager] StopLocalBGM: %.2f"), FadeOutTime);
+	if (UCrazyRooAudioSubsystem* AudioSubsystem = EnsureAudioTablesRegistered())
+	{
+		AudioSubsystem->StopBGM(FadeOutTime);
 	}
 }
 
