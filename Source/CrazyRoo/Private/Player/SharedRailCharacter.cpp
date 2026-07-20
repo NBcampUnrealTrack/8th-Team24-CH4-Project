@@ -214,6 +214,12 @@ void ASharedRailCharacter::MoveLeft()
         return;
     }
 
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
+
     CurrentLane = FMath::Clamp(CurrentLane-1,0,2);
 
     UE_LOG(LogTemp,Warning,TEXT("MoveLeft / CurrentLane: %d"),CurrentLane);
@@ -226,6 +232,12 @@ void ASharedRailCharacter::MoveRight()
         return;
     }
 
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
+
     CurrentLane = FMath::Clamp(CurrentLane+1, 0, 2);
 
     UE_LOG(LogTemp, Warning, TEXT("MoveRight / CurrentLane: %d"), CurrentLane);
@@ -237,6 +249,13 @@ void ASharedRailCharacter::MoveToCenterLane()
 	{
 		return;
 	}
+
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
+
 
 	CurrentLane = 1;
 	UE_LOG(LogTemp, Warning, TEXT("MoveToCenterLane / CurrentLane: %d"), CurrentLane);
@@ -268,6 +287,13 @@ void ASharedRailCharacter::DoJump()
         return;
     }
 
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
+
+
     Jump();
     UE_LOG(LogTemp, Warning, TEXT("Jump"));
 }
@@ -278,6 +304,12 @@ void ASharedRailCharacter::DoSlide()
     {
         return;
     }
+
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
 
     if (bIsSliding)
     {
@@ -310,6 +342,12 @@ void ASharedRailCharacter::RotateCameraLeft()
         return;
     }
 
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
+
     // Q: 좌측으로 90도 회전
     TargetCameraYaw -= 90.f;
 
@@ -322,6 +360,12 @@ void ASharedRailCharacter::RotateCameraRight()
     {
         return;
     }
+
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
 
     // E: 우측으로 90도 회전
     TargetCameraYaw += 90.f;
@@ -362,6 +406,12 @@ void ASharedRailCharacter::FireToLocation(const FVector& TargetLocation)
     {
         return;
     }
+
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
 
     FVector Start = GetActorLocation();
 
@@ -428,6 +478,13 @@ void ASharedRailCharacter::FireByAimRay(const FVector& AimOrigin, const FVector&
     {
         return;
     }
+
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
+	{
+		return;
+	}
+
 
     FVector NormalizedAimDirection = AimDirection.GetSafeNormal();
 
@@ -950,6 +1007,12 @@ void ASharedRailCharacter::FireBySelectedMode(
 )
 {
 	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// 사망 후 입력 차단
+	if (bPlayerDeathHandled)
 	{
 		return;
 	}

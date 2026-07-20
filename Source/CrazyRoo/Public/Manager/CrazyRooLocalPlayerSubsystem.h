@@ -41,6 +41,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|UI")
 	void SetMainUIVisible(bool bVisible);
 
+	/**
+    * 커서 '이미지'만 숨기거나 복구한다.
+    * bShowMouseCursor는 true로 유지되므로 마우스 위치 추적과 클릭은 그대로 동작.
+    * (슈터의 GetMouseAimRay가 계속 정상 작동해야 하기 때문)
+    */
+	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|UI")
+	void SetMouseCursorHidden(bool bHidden);
+
 protected:
 	/** 새 월드 준비됨 → GameStateSetEvent 구독 시작 + 이미 있으면 즉시 바인딩 */
 	void OnWorldReady(const UWorld::FActorsInitializedParams& Params);

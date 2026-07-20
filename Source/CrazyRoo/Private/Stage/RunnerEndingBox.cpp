@@ -190,6 +190,8 @@ void ARunnerEndingBox::PlayLocalClearSequence(const FTransform& DanceSpawnTransf
 			if (UCrazyRooLocalPlayerSubsystem* UISubsystem = LocalPlayer->GetSubsystem<UCrazyRooLocalPlayerSubsystem>())
 			{
 				UISubsystem->SetMainUIVisible(false);
+
+				UISubsystem->SetMouseCursorHidden(false);
 			}
 		}
 		//

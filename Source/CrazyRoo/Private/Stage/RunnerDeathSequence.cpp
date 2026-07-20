@@ -153,6 +153,9 @@ void ARunnerDeathSequence::PlayLocalDeathSequence(const FTransform& /*CageSpawnT
 			if (UCrazyRooLocalPlayerSubsystem* UISubsystem = LocalPlayer->GetSubsystem<UCrazyRooLocalPlayerSubsystem>())
 			{
 				UISubsystem->SetMainUIVisible(false);
+
+				UISubsystem->SetMouseCursorHidden(false);
+
 			}
 		}
 		//

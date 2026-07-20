@@ -165,6 +165,11 @@ void UCrazyRooLocalPlayerSubsystem::ShowStageUI(FName MapId)
 	//   일단 UI 입력모드로 시작한다. 이후 "게임 시작" 등은 SetUIInputMode(false)를
 	//   게임 로직(블루프린트) 쪽에서 명시적으로 호출해서 전환한다.
 	SetUIInputMode(true);
+
+	// 게임플레이 맵이면 커서 이미지만 숨김 (마우스 추적/클릭은 유지 → 슈터 사격 정상 동작)
+	// 로비 등 일반 맵이면 커서 복구
+	SetMouseCursorHidden(Row->bIsGameplayStage);
+
 }
 
 
@@ -204,4 +209,23 @@ void UCrazyRooLocalPlayerSubsystem::SetMainUIVisible(bool bVisible)
 
 	UE_LOG(LogCrazyRoo, Warning, TEXT("[UISubsystem] 메인 UI %s"),
 		bVisible ? TEXT("표시") : TEXT("숨김"));
+}
+
+void UCrazyRooLocalPlayerSubsystem::SetMouseCursorHidden(bool bHidden)
+{
+	ULocalPlayer* LP = GetLocalPlayer();
+	APlayerController* PC = LP ? LP->GetPlayerController(LP->GetWorld()) : nullptr;
+	if (!PC)
+	{
+		return;
+	}
+
+	// 입력 모드는 건드리지 않고 커서 이미지만 토글
+	PC->bShowMouseCursor = true;
+	PC->DefaultMouseCursor = bHidden ? EMouseCursor::None : EMouseCursor::Default;
+	PC->CurrentMouseCursor = bHidden ? EMouseCursor::None : EMouseCursor::Default;
+
+	UE_LOG(LogCrazyRoo, Warning, TEXT("[UISubsystem] 커서 숨김 = %s"),
+		bHidden ? TEXT("true") : TEXT("false"));
+
 }
