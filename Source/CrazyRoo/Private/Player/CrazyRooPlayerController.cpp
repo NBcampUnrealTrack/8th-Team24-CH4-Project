@@ -228,7 +228,8 @@ void ACrazyRooPlayerController::RequestUpdateCarousel(int32 NewIndex)
 	Server_UpdateCarousel(NewIndex);
 }
 
-void ACrazyRooPlayerController::SetInGameAimCursorMode(bool bShooter)
+//[무송] 중복기능이 있어서 주석처리
+/*void ACrazyRooPlayerController::SetInGameAimCursorMode(bool bShooter)
 {
 	if (!IsLocalController())
 	{
@@ -240,7 +241,7 @@ void ACrazyRooPlayerController::SetInGameAimCursorMode(bool bShooter)
 		/*
 		 * 마우스 위치는 계속 사용하지만
 		 * 언리얼 기본 화살표 이미지만 숨깁니다.
-		 */
+		 #1#
 		bShowMouseCursor = true;
 		DefaultMouseCursor = EMouseCursor::None;
 		CurrentMouseCursor = EMouseCursor::None;
@@ -275,7 +276,7 @@ void ACrazyRooPlayerController::RestoreDefaultMouseCursor()
 	bShowMouseCursor = true;
 	DefaultMouseCursor = EMouseCursor::Default;
 	CurrentMouseCursor = EMouseCursor::Default;
-}
+}*/
 
 void ACrazyRooPlayerController::Client_SetupGameplayCamera_Implementation()
 {
@@ -417,6 +418,27 @@ void ACrazyRooPlayerController::Server_UpdateCarousel_Implementation(int32 NewIn
 			}
 		}
 	}
+}
+
+void ACrazyRooPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	if (ACrazyRooPlayerState* CrazyRooPS = Cast<ACrazyRooPlayerState>(PlayerState))
+	{
+		OnPlayerStateReady.Broadcast(CrazyRooPS); // UI에게 알림!
+	}
+}
+
+void ACrazyRooPlayerController::InitPlayerState()
+{
+	Super::InitPlayerState();
+
+	if (ACrazyRooPlayerState* CrazyRooPS = Cast<ACrazyRooPlayerState>(PlayerState))
+	{
+		OnPlayerStateReady.Broadcast(CrazyRooPS); // UI에게 알림!
+	}
+
 }
 
 void ACrazyRooPlayerController::InputLeft()

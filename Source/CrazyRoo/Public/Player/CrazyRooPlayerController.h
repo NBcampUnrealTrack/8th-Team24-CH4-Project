@@ -13,8 +13,10 @@ class ASharedCharacterManager; //이름 변경 할 수도? 일단 테스트
 class UCrazyRooCountdownWidget; // [한길] 0711 카운트다운 위젯
 enum class ECrazyRooPlayerRole : uint8;
 struct FInputActionValue; // 테스트용 앞 뒤 움직임.
+class ACrazyRooPlayerState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCrazyRooRoleRejected, ECrazyRooPlayerRole, DeniedRole);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateReady, ACrazyRooPlayerState*, ReadyPlayerState);
 
 UCLASS(abstract)
 class ACrazyRooPlayerController : public APlayerController
@@ -94,12 +96,17 @@ public:
 	* 슈터라면 일반 마우스 아이콘을 숨기고,
 	* WBP_AimCursor만 화면에 보이게 합니다.
 	*/
-	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Aim Cursor")
-	void SetInGameAimCursorMode(bool bShooter);
+	//[무송] 중복기능이 있어서 잠시 주석처리
+	//UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Aim Cursor")
+	//void SetInGameAimCursorMode(bool bShooter);
 
 	/** 메뉴로 돌아갈 때 일반 마우스 커서를 복구합니다. */
-	UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Aim Cursor")
-	void RestoreDefaultMouseCursor();
+	//UFUNCTION(BlueprintCallable, Category = "CrazyRoo|Aim Cursor")
+	//void RestoreDefaultMouseCursor();
+
+	// 에임 커서 UI가 구독할 이벤트 변수
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnPlayerStateReady OnPlayerStateReady;
 
 protected:
 
@@ -121,6 +128,10 @@ protected:
 	// 서버로 전송되는 실제 RPC 함수
 	UFUNCTION(Server, Reliable)
 	void Server_UpdateCarousel(int32 NewIndex);
+
+	// 컨트롤러 PlayerState 생성됬다고 서버 및 클라이언트한테 호출하는 용 (이런식으로 구조를 짜면 더 잘했을꺼 같다는 생각이 마지막 날에 들었음)
+	virtual void OnRep_PlayerState() override;  // 클라이언트용
+	virtual void InitPlayerState() override;    // 서버 호스트용
 
 	// ── 공유 캐릭터 조작 (RailCoopPlayerController, 한길님 파트) ──
 
