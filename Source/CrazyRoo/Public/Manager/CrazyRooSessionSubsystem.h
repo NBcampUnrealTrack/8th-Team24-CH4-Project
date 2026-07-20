@@ -107,6 +107,14 @@ protected:
 	void HandleJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void HandleLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error);// EOS 로그인 완료 콜백
 
+	// 나중에 Redpoint EOS 플러그인으로 전환예정
+	// [워크어라운드] 지정한 인원수를 CURPLAYERS에 넣어 세션 생성 (CreateDedicatedSession과 재생성이 공용)
+	void CreateDedicatedSessionInternal(int32 AdvertisedCount);
+
+	// [워크어라운드] 인원수 갱신용 DestroySession 완료 콜백 → 최신 인원수로 재생성
+	void HandleDestroyForRecreate(FName SessionName, bool bWasSuccessful);
+	//
+
 	// 온라인 세션 인터페이스를 안전하게 가져오는 유틸리티 함수
 	IOnlineSessionPtr GetSessionInterface() const;
 
@@ -150,6 +158,21 @@ protected:
 
 	// EOS 로그인 진행 중 플래그 (중복 AutoLogin 방지)
 	bool bLoginInProgress = false;
+
+
+	// 나중에 Redpoint EOS 플러그인으로 전환예정
+	// [워크어라운드] 세션 재생성(파괴→생성) 진행 중 플래그
+	bool bRecreateInProgress = false;
+
+	// [워크어라운드] 다음 재생성 때 광고할 최신 인원수 (재생성 중 인원이 또 바뀌어도 최신값 하나만 유지)
+	int32 PendingAdvertisedCount = 0;
+
+	// [워크어라운드] 마지막으로 세션에 실제 반영된 인원수 (재생성 완료 후 최신값과 비교용)
+	int32 LastAppliedCount = 0;
+
+	// [워크어라운드] 재생성용 DestroySession 델리게이트 핸들
+	FDelegateHandle RecreateDestroyHandle;
+	//
 
 	// [배포] persistentauth를 먼저 시도했는지 (실패 시 accountportal 폴백 1회용)
 	bool bTriedPersistentAuth = false;
