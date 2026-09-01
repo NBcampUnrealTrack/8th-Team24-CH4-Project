@@ -12,6 +12,9 @@ Saved/
 *.VC.db
 *.VC.VC.opendb
 
+# Plugins (locally installed)
+/Plugins/Monolith/
+
 *.log
 *.tmp
 

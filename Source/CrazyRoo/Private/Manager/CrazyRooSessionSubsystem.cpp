@@ -444,7 +444,7 @@ FCrazyRooRoomInfo UCrazyRooSessionSubsystem::MakeRoomInfo(int32 Index) const
 	//	Info.CurrentPlayers = Info.MaxPlayers - R.Session.NumOpenPublicConnections;
 	//}
 
-	int32 AdvertisedCount = -1;
+	int64 AdvertisedCount = -1;
 
 	// SessionSettings 내부에 실제 세팅값들이 저장된 Settings TMap에서 키를 직접 찾습니다.
 	if (const FOnlineSessionSetting* Setting = R.Session.SessionSettings.Settings.Find(PlayerCountKey))
